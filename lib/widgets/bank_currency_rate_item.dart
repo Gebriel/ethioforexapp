@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 class BankCurrencyRateItem extends StatelessWidget {
-  final String currencyName;
-  final String currencyCode;
-  final double cashBuying;
-  final double cashSelling;
-  final double transactionBuying;
-  final double transactionSelling;
+  final String? currencyName;
+  final String? currencyCode;
+  final double? cashBuying;
+  final double? cashSelling;
+  final double? transactionBuying;
+  final double? transactionSelling;
 
   const BankCurrencyRateItem({
     super.key,
@@ -27,25 +27,32 @@ class BankCurrencyRateItem extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          if (theme.brightness == Brightness.light)
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            )
+          BoxShadow(
+            color: theme.brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.2)
+                : Colors.grey.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
         ],
+        border: Border.all(
+          color: theme.brightness == Brightness.dark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.04),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "$currencyName ($currencyCode)",
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            "${currencyName ?? 'Unknown'} (${currencyCode ?? 'N/A'})",
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 12),
-
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -53,7 +60,7 @@ class BankCurrencyRateItem extends StatelessWidget {
               _buildRate("Cash Sell", cashSelling),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -66,15 +73,15 @@ class BankCurrencyRateItem extends StatelessWidget {
     );
   }
 
-  Widget _buildRate(String label, double value) {
+  Widget _buildRate(String label, double? value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 2),
         Text(
-          value.toStringAsFixed(4),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          value != null ? value.toStringAsFixed(4) : '-',
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ],
     );

@@ -59,35 +59,36 @@ class _ConvertScreenState extends State<ConvertScreen> {
       return;
     }
 
-    final rateList = useTransaction
-        ? bankRates!.transactionRates
-        : bankRates!.cashRates;
+    final validRates = useTransaction
+        ? bankRates!.transactionRates.where((r) =>
+    r.currencyCode == selectedCurrencyCode &&
+        r.buying > 0 &&
+        r.selling > 0)
+        : bankRates!.cashRates.where((r) =>
+    r.currencyCode == selectedCurrencyCode &&
+        r.buying > 0 &&
+        r.selling > 0);
 
-    if (rateList.isEmpty) {
+    if (validRates.isEmpty) {
       setState(() => convertedAmount = null);
       return;
     }
 
-    final rate = rateList.firstWhere(
-          (r) => r.currencyCode == selectedCurrencyCode,
-      orElse: () => rateList.first,
-    );
-
-    double result;
-    if (birrToForeign) {
-      result = input / rate.buying;
-    } else {
-      result = input * rate.selling;
-    }
+    final rate = validRates.first;
+    final result = birrToForeign
+        ? input / rate.buying
+        : input * rate.selling;
 
     setState(() => convertedAmount = result);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text("Currency Converter")),
+        appBar: AppBar(title: const Text("Currency Converter"), centerTitle: true,),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -104,8 +105,13 @@ class _ConvertScreenState extends State<ConvertScreen> {
       orElse: () => selectedCash,
     );
 
+    final hasValidTxnRate = txnRates.any((r) =>
+    r.currencyCode == selectedCurrencyCode &&
+        r.buying > 0 &&
+        r.selling > 0);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Currency Converter")),
+      appBar: AppBar(title: const Text("Currency Converter"), centerTitle: true,),
       body: cashRates.isEmpty
           ? const Center(child: Text("No exchange rates available."))
           : SingleChildScrollView(
@@ -113,44 +119,89 @@ class _ConvertScreenState extends State<ConvertScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DropdownButton<String>(
-              isExpanded: true,
-              value: selectedBankCode,
-              items: _repository.banks.map((b) {
-                return DropdownMenuItem(
-                  value: b.bankCode,
-                  child: Text(b.bankName),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) loadRates(val);
-              },
+            // Bank selector
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: theme.cardColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: selectedBankCode,
+                  items: _repository.banks.map((b) {
+                    return DropdownMenuItem(
+                      value: b.bankCode,
+                      child: Text(b.bankName),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) loadRates(val);
+                  },
+                ),
+              ),
             ),
-            const SizedBox(height: 10),
-            DropdownButton<String>(
-              isExpanded: true,
-              value: selectedCurrencyCode,
-              items: cashRates.map((c) {
-                return DropdownMenuItem(
-                  value: c.currencyCode,
-                  child: Text("${c.currencyName} (${c.currencyCode})"),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() => selectedCurrencyCode = val);
-                calculateConversion();
-              },
+            const SizedBox(height: 12),
+
+            // Currency selector
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: theme.cardColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: selectedCurrencyCode,
+                  items: cashRates.map((c) {
+                    return DropdownMenuItem(
+                      value: c.currencyCode,
+                      child:
+                      Text("${c.currencyName} (${c.currencyCode})"),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() => selectedCurrencyCode = val);
+                    calculateConversion();
+                  },
+                ),
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
+
             Row(
               children: [
                 const Text("Use Transaction Rate"),
                 Switch(
                   value: useTransaction,
-                  onChanged: (val) => setState(() {
+                  onChanged: hasValidTxnRate
+                      ? (val) => setState(() {
                     useTransaction = val;
                     calculateConversion();
-                  }),
+                  })
+                      : null,
                 ),
               ],
             ),
@@ -166,6 +217,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 10),
             TextField(
               controller: amountController,
               keyboardType: TextInputType.number,
@@ -181,7 +233,10 @@ class _ConvertScreenState extends State<ConvertScreen> {
                 birrToForeign
                     ? "≈ ${convertedAmount!.toStringAsFixed(2)} ${selectedCurrencyCode!}"
                     : "≈ ${convertedAmount!.toStringAsFixed(2)} ETB",
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             const SizedBox(height: 20),
             BankCurrencyRateItem(

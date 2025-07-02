@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/bank.dart';
 import '../repositories/currency_repository.dart';
-import '../widgets/bank_card.dart';
 import '../widgets/rate_list_item.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -98,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Exchange Rates"),
+        title: const Text("EthioForex"),
         centerTitle: true,
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
@@ -152,45 +152,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? const Center(child: Text("No exchange rates found."))
                   : ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                children: [
-                  BankCard(
-                    bankName: rates.first.bankName,
+                children: rates.map((r) {
+                  final txn = currencyRates!.transactionRates.firstWhere(
+                        (t) => t.bankCode == r.bankCode,
+                    orElse: () => r,
+                  );
+
+                  Bank? bank;
+                  try {
+                    bank = _repository.banks.firstWhere((b) => b.bankCode == r.bankCode);
+                  } catch (_) {
+                    bank = null;
+                  }
+
+                  return RateListItem(
+                    bankName: r.bankName,
+                    bankLogo: bank?.bankLogo ?? '',
                     currency: selectedCurrency!,
-                    cashBuying: rates.first.buying,
-                    cashSelling: rates.first.selling,
-                    transactionBuying: currencyRates!.transactionRates.firstWhere(
-                          (e) => e.bankCode == rates.first.bankCode,
-                      orElse: () => rates.first,
-                    ).buying,
-                    transactionSelling: currencyRates.transactionRates.firstWhere(
-                          (e) => e.bankCode == rates.first.bankCode,
-                      orElse: () => rates.first,
-                    ).selling,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    "Other Banks",
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 10),
-                  ...rates.skip(1).map((r) {
-                    final txn = currencyRates!.transactionRates.firstWhere(
-                          (t) => t.bankCode == r.bankCode,
-                      orElse: () => r,
-                    );
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: RateListItem(
-                        bankName: r.bankName,
-                        currency: selectedCurrency!,
-                        cashBuying: r.buying,
-                        cashSelling: r.selling,
-                        transactionBuying: txn.buying,
-                        transactionSelling: txn.selling,
-                      ),
-                    );
-                  })
-                ],
+                    cashBuying: r.buying,
+                    cashSelling: r.selling,
+                    transactionBuying: txn.buying,
+                    transactionSelling: txn.selling,
+                  );
+                }).toList(),
               ),
             ),
           ),

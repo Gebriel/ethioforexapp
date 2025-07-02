@@ -15,7 +15,7 @@ class CurrencyRepository {
   bool get isInitialized => _currencies.isNotEmpty && _banks.isNotEmpty;
 
   List<Currency> get currencies => _currencies;
-  List<Bank> get banks => _banks; // ✅ Add this getter
+  List<Bank> get banks => _banks;
   CurrencyRatesResponse? getCachedRates(String code) => _cache[code];
 
   Future<void> initialize() async {

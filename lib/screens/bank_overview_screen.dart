@@ -1,8 +1,6 @@
-// ✅ lib/screens/bank_overview_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/bank_rates_response.dart';
+import '../models/bank.dart';
 import '../repositories/bank_repository.dart';
 import '../widgets/bank_currency_rate_item.dart';
 
@@ -40,7 +38,10 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
   }
 
   Future<void> loadInitialData({bool force = false}) async {
-    if (!force && _repository.isInitialized && selectedBankCode != null && _repository.getCachedRates(selectedBankCode!) != null) {
+    if (!force &&
+        _repository.isInitialized &&
+        selectedBankCode != null &&
+        _repository.getCachedRates(selectedBankCode!) != null) {
       setState(() => hasLoadedOnce = true);
       return;
     }
@@ -61,7 +62,6 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
         hasLoadedOnce = true;
       });
     } catch (e) {
-      print("Error: $e");
       setState(() {
         isLoading = false;
         hasLoadedOnce = true;
@@ -85,7 +85,6 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
       });
       await saveBankPreference(bankCode);
     } catch (e) {
-      print("Error loading rates: $e");
       setState(() => isLoading = false);
     }
   }
@@ -95,6 +94,15 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
     final theme = Theme.of(context);
     final bankRates = selectedBankCode != null ? _repository.getCachedRates(selectedBankCode!) : null;
     final rates = bankRates?.cashRates ?? [];
+
+    // Get logo URL of selected bank
+    final selectedBank = selectedBankCode != null
+        ? _repository.banks.firstWhere(
+          (b) => b.bankCode == selectedBankCode,
+      orElse: () => Bank(bankCode: '', bankName: '', bankLogo: ''),
+    )
+        : null;
+    final logoUrl = selectedBank?.bankLogo ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -106,23 +114,70 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: selectedBankCode,
-              items: _repository.banks.map((b) {
-                return DropdownMenuItem<String>(
-                  value: b.bankCode,
-                  child: Text(b.bankName),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) {
-                  loadRates(val);
-                }
-              },
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: theme.cardColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: selectedBankCode,
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  items: _repository.banks.map((b) {
+                    return DropdownMenuItem<String>(
+                      value: b.bankCode,
+                      child: Text(b.bankName),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      loadRates(val);
+                    }
+                  },
+                ),
+              ),
             ),
           ),
+          const SizedBox(height: 16),
+          if (logoUrl.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Center(
+                child: Container(
+                  height: 100,
+                  width: 100,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(100),
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.network(
+                    logoUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox(),
+                  ),
+                ),
+              ),
+            ),
+
+          const SizedBox(height: 6),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {

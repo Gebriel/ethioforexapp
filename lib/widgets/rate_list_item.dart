@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class RateListItem extends StatelessWidget {
   final String bankName;
+  final String? bankLogo;
   final String currency;
   final double cashBuying;
   final double cashSelling;
@@ -11,6 +12,7 @@ class RateListItem extends StatelessWidget {
   const RateListItem({
     super.key,
     required this.bankName,
+    required this.bankLogo,
     required this.currency,
     required this.cashBuying,
     required this.cashSelling,
@@ -27,27 +29,51 @@ class RateListItem extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          if (theme.brightness == Brightness.light)
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            )
+          BoxShadow(
+            color: theme.brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.2)
+                : Colors.grey.withOpacity(0.15),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
         ],
+        border: Border.all(
+          color: theme.brightness == Brightness.dark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.04),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Bank name and currency
-          Text(
-            "$bankName – $currency",
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+          Row(
+            children: [
+              if (bankLogo != null && bankLogo!.isNotEmpty)
+                CircleAvatar(
+                  backgroundImage: NetworkImage(bankLogo!),
+                  radius: 22,
+                  backgroundColor: Colors.transparent,
+                )
+              else
+                const CircleAvatar(
+                  radius: 22,
+                  backgroundColor: Colors.grey,
+                  child: Icon(Icons.account_balance, color: Colors.white),
+                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "$bankName – $currency",
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-
-          // Two rows for rates
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -55,7 +81,7 @@ class RateListItem extends StatelessWidget {
               _buildRate("Cash Sell", cashSelling),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -76,7 +102,7 @@ class RateListItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           value.toStringAsFixed(4),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ],
     );
