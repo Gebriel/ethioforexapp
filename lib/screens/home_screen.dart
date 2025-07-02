@@ -98,10 +98,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("EthioForex"),
+        title: Text(
+          "EthioForex",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
+        backgroundColor: theme.colorScheme.surface, // AppBar is also a 'surface' element
+        automaticallyImplyLeading: false, // You can set this to true if you add a drawer/back button
       ),
       body: Column(
         children: [

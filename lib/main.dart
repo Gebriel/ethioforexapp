@@ -1,4 +1,5 @@
 import 'package:ethioforexapp/screens/main_screen.dart';
+import 'package:ethioforexapp/theme_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme_notifier.dart';
@@ -24,9 +25,10 @@ class MyApp extends StatelessWidget {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     return MaterialApp(
       title: 'EthioForex',
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
+      theme: themeNotifier.lightTheme,
+      darkTheme: themeNotifier.darkTheme,
       themeMode: themeNotifier.themeMode,
+      debugShowCheckedModeBanner: false,
       home: const MainScreen(), // or your entry screen
     );
   }

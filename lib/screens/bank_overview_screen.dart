@@ -95,24 +95,31 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
     final bankRates = selectedBankCode != null ? _repository.getCachedRates(selectedBankCode!) : null;
     final rates = bankRates?.cashRates ?? [];
 
-    // Get logo URL of selected bank
-    final selectedBank = selectedBankCode != null
-        ? _repository.banks.firstWhere(
-          (b) => b.bankCode == selectedBankCode,
-      orElse: () => Bank(bankCode: '', bankName: '', bankLogo: ''),
-    )
-        : null;
+    Bank? selectedBank;
+    if (selectedBankCode != null && _repository.banks.isNotEmpty) {
+      selectedBank = _repository.banks.firstWhere(
+            (b) => b.bankCode == selectedBankCode,
+        orElse: () => Bank(bankCode: '', bankName: '', bankLogo: ''),
+      );
+    }
     final logoUrl = selectedBank?.bankLogo ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Banks Overview"),
-        centerTitle: true,
-        backgroundColor: theme.scaffoldBackgroundColor,
+      title: Text(
+      "Banks Overview",
+      style: theme.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w600,
       ),
+    ),
+    centerTitle: true,
+    elevation: 0,
+    backgroundColor: theme.colorScheme.surface, // AppBar is also a 'surface' element
+    automaticallyImplyLeading: false, // You can set this to true if you add a drawer/back button
+    ),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Bank Selector (stays fixed at top)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
             child: Container(
@@ -149,35 +156,8 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          if (logoUrl.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Center(
-                child: Container(
-                  height: 100,
-                  width: 100,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(100),
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Image.network(
-                    logoUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox(),
-                  ),
-                ),
-              ),
-            ),
 
-          const SizedBox(height: 6),
+          // Main scrollable content (logo + rates)
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -188,22 +168,67 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : rates.isEmpty
                   ? const Center(child: Text("No rates available."))
-                  : ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: rates.map((r) {
-                  final txn = bankRates!.transactionRates.firstWhere(
-                        (t) => t.currencyCode == r.currencyCode,
-                    orElse: () => r,
-                  );
-                  return BankCurrencyRateItem(
-                    currencyName: r.currencyName,
-                    currencyCode: r.currencyCode,
-                    cashBuying: r.buying,
-                    cashSelling: r.selling,
-                    transactionBuying: txn.buying,
-                    transactionSelling: txn.selling,
-                  );
-                }).toList(),
+                  : CustomScrollView(
+                slivers: [
+                  // Bank Logo Section
+                  if (logoUrl.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Center(
+                          child: Container(
+                            height: 100,
+                            width: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(100),
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Image.network(
+                              logoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Rates List
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                        final rate = rates[index];
+                        final txnRate = bankRates?.transactionRates.firstWhere(
+                              (t) => t.currencyCode == rate.currencyCode,
+                          orElse: () => rate,
+                        );
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          child: BankCurrencyRateItem(
+                            currencyName: rate.currencyName ?? 'Unknown',
+                            currencyCode: rate.currencyCode ?? 'N/A',
+                            cashBuying: rate.buying ?? 0.0,
+                            cashSelling: rate.selling ?? 0.0,
+                            transactionBuying: txnRate?.buying ?? 0.0,
+                            transactionSelling: txnRate?.selling ?? 0.0,
+                          ),
+                        );
+                      },
+                      childCount: rates.length,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
