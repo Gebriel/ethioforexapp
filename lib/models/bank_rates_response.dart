@@ -5,12 +5,14 @@ class BankRatesResponse {
   final String bankName;
   final List<BankCurrencyRate> cashRates;
   final List<BankCurrencyRate> transactionRates;
+  final DateTime? updated;
 
   BankRatesResponse({
     required this.bankCode,
     required this.bankName,
     required this.cashRates,
     required this.transactionRates,
+    this.updated,
   });
 
   factory BankRatesResponse.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class BankRatesResponse {
       transactionRates: (json['transaction_rate'] as List)
           .map((e) => BankCurrencyRate.fromJson(e))
           .toList(),
+      updated: DateTime.parse(json['updated']),
     );
   }
 }

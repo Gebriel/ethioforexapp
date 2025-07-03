@@ -100,6 +100,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
 
     Bank? selectedBank;
     if (selectedBankCode != null && _repository.banks.isNotEmpty) {
+
       selectedBank = _repository.banks.firstWhere(
         (b) => b.bankCode == selectedBankCode,
         orElse: () => Bank(bankCode: '', bankName: '', bankLogo: ''),
@@ -231,6 +232,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
                                 cashSelling: rate.selling ?? 0.0,
                                 transactionBuying: txnRate?.buying ?? 0.0,
                                 transactionSelling: txnRate?.selling ?? 0.0,
+                                updated: bankRates?.updated
                               ),
                             );
                           }, childCount: rates.length),

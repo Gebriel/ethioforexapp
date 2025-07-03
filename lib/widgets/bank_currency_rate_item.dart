@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class BankCurrencyRateItem extends StatelessWidget {
   final String? currencyName;
@@ -7,6 +8,7 @@ class BankCurrencyRateItem extends StatelessWidget {
   final double? cashSelling;
   final double? transactionBuying;
   final double? transactionSelling;
+  final DateTime? updated;
 
   const BankCurrencyRateItem({
     super.key,
@@ -16,22 +18,24 @@ class BankCurrencyRateItem extends StatelessWidget {
     required this.cashSelling,
     required this.transactionBuying,
     required this.transactionSelling,
+    this.updated,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme; // Use theme.colorScheme for consistency
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Color(0xFF1E1E1E) : Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: colorScheme.shadow.withOpacity(0.1), // Use theme.co
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -45,10 +49,9 @@ class BankCurrencyRateItem extends StatelessWidget {
             children: [
               Text(
                 currencyName ?? 'Unknown',
-                style: TextStyle(
-                  fontSize: 16,
+                style: theme.textTheme.titleMedium?.copyWith( // Use theme.textTheme
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: colorScheme.onSurface, // Use theme.colorScheme
                 ),
               ),
               Container(
@@ -76,7 +79,7 @@ class BankCurrencyRateItem extends StatelessWidget {
                   context,
                   "Cash Buy",
                   cashBuying,
-                  isDark ? Color(0xFF2A2A2A) : Color(0xFFF5F7FA),
+                  colorScheme.surfaceContainerHighest,
                 ),
               ),
               const SizedBox(width: 8),
@@ -85,7 +88,7 @@ class BankCurrencyRateItem extends StatelessWidget {
                   context,
                   "Cash Sell",
                   cashSelling,
-                  isDark ? Color(0xFF2A2A2A) : Color(0xFFF5F7FA),
+                  colorScheme.surfaceContainerHighest,
                 ),
               ),
             ],
@@ -98,7 +101,7 @@ class BankCurrencyRateItem extends StatelessWidget {
                   context,
                   "Txn Buy",
                   transactionBuying,
-                  isDark ? Color(0xFF2A2A2A) : Color(0xFFF5F7FA),
+                  colorScheme.surfaceContainerHighest,
                 ),
               ),
               const SizedBox(width: 8),
@@ -107,18 +110,34 @@ class BankCurrencyRateItem extends StatelessWidget {
                   context,
                   "Txn Sell",
                   transactionSelling,
-                  isDark ? Color(0xFF2A2A2A) : Color(0xFFF5F7FA),
+                  colorScheme.surfaceContainerHighest,
                 ),
               ),
             ],
           ),
+          // Added Updated At
+          if (updated != null) ...[
+            const SizedBox(height: 16),
+            Divider(color: colorScheme.outline, thickness: 0.5), // Use theme.colorScheme
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Last updated: ${DateFormat('MMM d, hh:mm a').format(updated!)}',
+                style: theme.textTheme.bodySmall?.copyWith( // Use theme.textTheme
+                  color: colorScheme.onSurfaceVariant, // Use theme.colorScheme for good contrast
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildRateCard(BuildContext context, String label, double? value, Color bgColor) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme; // Use theme.colorScheme
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -131,18 +150,16 @@ class BankCurrencyRateItem extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.white70 : Colors.black54,
+            style: theme.textTheme.bodySmall?.copyWith( // Use theme.textTheme
+              color: colorScheme.onSurfaceVariant, // Use theme.colorScheme for good contrast
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value != null ? value.toStringAsFixed(4) : '-',
-            style: TextStyle(
-              fontSize: 14,
+            style: theme.textTheme.bodyMedium?.copyWith( // Use theme.textTheme
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+              color: colorScheme.onSurface, // Use theme.colorScheme for good contrast
             ),
           ),
         ],
