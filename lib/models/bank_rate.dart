@@ -5,6 +5,7 @@ class BankRate {
   final String currencyName;
   final double buying;
   final double selling;
+  final DateTime? updatedAt;
 
   BankRate({
     required this.bankCode,
@@ -13,6 +14,7 @@ class BankRate {
     required this.currencyName,
     required this.buying,
     required this.selling,
+    this.updatedAt,
   });
 
   factory BankRate.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class BankRate {
       currencyName: json['currency_name'],
       buying: (json['buying'] as num).toDouble(),
       selling: (json['selling'] as num).toDouble(),
+      updatedAt: DateTime.parse(json['updated_at']),
     );
   }
 }

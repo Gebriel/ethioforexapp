@@ -1,39 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Import for date formatting
 
 class RateListItem extends StatelessWidget {
   final String bankName;
   final String? bankLogo;
-  final String currency;
+  final String bankCode;
   final double cashBuying;
   final double cashSelling;
   final double transactionBuying;
   final double transactionSelling;
+  final DateTime? updatedAt;
 
   const RateListItem({
     super.key,
     required this.bankName,
     required this.bankLogo,
-    required this.currency,
+    required this.bankCode,
     required this.cashBuying,
     required this.cashSelling,
     required this.transactionBuying,
     required this.transactionSelling,
+    this.updatedAt,
   });
+
+  // Original _formatRate logic: Shows actual value (including 0.0000) or '-' for null.
+  String _formatRate(double value) {
+    // Note: The original code passed `double` directly, implying non-null.
+    // If it could be null, the parameter type would need to be `double?`.
+    // Assuming it's guaranteed to be non-null for now as per original _buildRateCard.
+    return value.toStringAsFixed(4);
+  }
+
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme; // Use theme.colorScheme for consistency
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Color(0xFF1E1E1E) : Colors.white,
+        // Use theme.colorScheme.surface for consistency
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: colorScheme.shadow.withOpacity(0.1), // Use theme.colorScheme.shadow
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -56,18 +70,20 @@ class RateListItem extends StatelessWidget {
                   else
                     CircleAvatar(
                       radius: 16,
-                      backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                      child: Icon(Icons.account_balance,
-                          size: 16,
-                          color: isDark ? Colors.white : Colors.black),
+                      // Use theme colors for consistency
+                      backgroundColor: isDark ? colorScheme.surfaceContainerHighest : colorScheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.account_balance,
+                        size: 16,
+                        color: isDark ? colorScheme.onSurface : colorScheme.onSurface,
+                      ),
                     ),
                   const SizedBox(width: 12),
                   Text(
                     bankName,
-                    style: TextStyle(
-                      fontSize: 16,
+                    style: theme.textTheme.titleMedium?.copyWith( // Use theme.textTheme
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: colorScheme.onSurface, // Use theme.colorScheme
                     ),
                   ),
                 ],
@@ -79,11 +95,10 @@ class RateListItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  currency,
-                  style: TextStyle(
+                  bankCode,
+                  style: theme.textTheme.labelMedium?.copyWith( // Use theme.textTheme
                     color: theme.colorScheme.onPrimary,
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
                   ),
                 ),
               ),
@@ -97,7 +112,7 @@ class RateListItem extends StatelessWidget {
                   context,
                   "Cash Buy",
                   cashBuying,
-                  isDark ? Color(0xFF2A2A2A) : Color(0xFFF5F7FA),
+                  colorScheme.surfaceContainerHighest, // Use theme.colorScheme
                 ),
               ),
               const SizedBox(width: 8),
@@ -106,7 +121,7 @@ class RateListItem extends StatelessWidget {
                   context,
                   "Cash Sell",
                   cashSelling,
-                  isDark ? Color(0xFF2A2A2A) : Color(0xFFF5F7FA),
+                  colorScheme.surfaceContainerHighest, // Use theme.colorScheme
                 ),
               ),
             ],
@@ -119,7 +134,7 @@ class RateListItem extends StatelessWidget {
                   context,
                   "Txn Buy",
                   transactionBuying,
-                  isDark ? Color(0xFF2A2A2A) : Color(0xFFF5F7FA),
+                  colorScheme.surfaceContainerHighest, // Use theme.colorScheme
                 ),
               ),
               const SizedBox(width: 8),
@@ -128,18 +143,34 @@ class RateListItem extends StatelessWidget {
                   context,
                   "Txn Sell",
                   transactionSelling,
-                  isDark ? Color(0xFF2A2A2A) : Color(0xFFF5F7FA),
+                  colorScheme.surfaceContainerHighest, // Use theme.colorScheme
                 ),
               ),
             ],
           ),
+          // Added Updated At
+          if (updatedAt != null) ...[
+            const SizedBox(height: 16),
+            Divider(color: colorScheme.outline, thickness: 0.5), // Use theme.colorScheme
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Last updated: ${DateFormat('MMM d, hh:mm a').format(updatedAt!)}',
+                style: theme.textTheme.bodySmall?.copyWith( // Use theme.textTheme
+                  color: colorScheme.onSurfaceVariant, // Use theme.colorScheme for good contrast
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildRateCard(BuildContext context, String label, double value, Color bgColor) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme; // Use theme.colorScheme
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -152,18 +183,16 @@ class RateListItem extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.white70 : Colors.black54,
+            style: theme.textTheme.bodySmall?.copyWith( // Use theme.textTheme
+              color: colorScheme.onSurfaceVariant, // Use theme.colorScheme for good contrast
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            value.toStringAsFixed(4),
-            style: TextStyle(
-              fontSize: 14,
+            _formatRate(value), // Use _formatRate for consistency
+            style: theme.textTheme.bodyMedium?.copyWith( // Use theme.textTheme
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black,
+              color: colorScheme.onSurface, // Use theme.colorScheme for good contrast
             ),
           ),
         ],

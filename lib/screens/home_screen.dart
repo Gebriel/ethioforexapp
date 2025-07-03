@@ -178,11 +178,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: RateListItem(
                       bankName: r.bankName,
                       bankLogo: bank?.bankLogo ?? '',
-                      currency: selectedCurrency!,
+                      bankCode: r.bankCode,
                       cashBuying: r.buying,
                       cashSelling: r.selling,
                       transactionBuying: txn.buying,
                       transactionSelling: txn.selling,
+                      updatedAt: r.updatedAt,
                     ),
                   );
                 }).toList(),
