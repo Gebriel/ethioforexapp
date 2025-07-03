@@ -61,62 +61,108 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final themeNotifier = Provider.of<ThemeNotifier>(context);
     final isDarkMode = themeNotifier.themeMode == ThemeMode.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Settings"),
+        title: Text(
+          "Settings",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: theme.colorScheme.surface,
+        automaticallyImplyLeading: false,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
+      body: Column(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.black.withOpacity(0.1)
-                      : Colors.grey.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+          // Settings Cards Section
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                // Settings Options
+                SliverPadding(
+                  padding: const EdgeInsets.all(20),
+                  sliver: SliverToBoxAdapter(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: theme.cardColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            title: const Text("Dark Mode"),
+                            value: isDarkMode,
+                            onChanged: (_) => themeNotifier.toggleTheme(),
+                          ),
+                          Divider(height: 1, color: theme.dividerColor),
+                          SwitchListTile(
+                            title: const Text("Daily Notifications"),
+                            value: notificationsEnabled,
+                            onChanged: (val) {
+                              setState(() => notificationsEnabled = val);
+                              saveNotificationPref(val);
+                              // TODO: implement daily notification logic
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Information Section
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: theme.cardColor,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              title: const Text("Privacy Policy"),
+                              leading: const Icon(Icons.privacy_tip_outlined),
+                              onTap: () => _showBottomSheet("Privacy Policy", _privacyText),
+                            ),
+                            Divider(height: 1, color: theme.dividerColor),
+                            ListTile(
+                              title: const Text("About Us"),
+                              leading: const Icon(Icons.info_outline),
+                              onTap: () => _showBottomSheet("About Us", _aboutText),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                    ]),
+                  ),
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text("Dark Mode"),
-                  value: isDarkMode,
-                  onChanged: (_) => themeNotifier.toggleTheme(),
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
-                  title: const Text("Daily Notifications"),
-                  value: notificationsEnabled,
-                  onChanged: (val) {
-                    setState(() => notificationsEnabled = val);
-                    saveNotificationPref(val);
-                    // TODO: implement daily notification logic
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 30),
-          ListTile(
-            title: const Text("Privacy Policy"),
-            leading: const Icon(Icons.privacy_tip_outlined),
-            onTap: () => _showBottomSheet("Privacy Policy", _privacyText),
-          ),
-          ListTile(
-            title: const Text("About Us"),
-            leading: const Icon(Icons.info_outline),
-            onTap: () => _showBottomSheet("About Us", _aboutText),
           ),
         ],
       ),

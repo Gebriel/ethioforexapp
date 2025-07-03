@@ -50,7 +50,8 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
 
     try {
       await _repository.initialize();
-      final defaultCode = _repository.banks.any((b) => b.bankCode == selectedBankCode)
+      final defaultCode =
+          _repository.banks.any((b) => b.bankCode == selectedBankCode)
           ? selectedBankCode!
           : _repository.banks.first.bankCode;
 
@@ -92,13 +93,15 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bankRates = selectedBankCode != null ? _repository.getCachedRates(selectedBankCode!) : null;
+    final bankRates = selectedBankCode != null
+        ? _repository.getCachedRates(selectedBankCode!)
+        : null;
     final rates = bankRates?.cashRates ?? [];
 
     Bank? selectedBank;
     if (selectedBankCode != null && _repository.banks.isNotEmpty) {
       selectedBank = _repository.banks.firstWhere(
-            (b) => b.bankCode == selectedBankCode,
+        (b) => b.bankCode == selectedBankCode,
         orElse: () => Bank(bankCode: '', bankName: '', bankLogo: ''),
       );
     }
@@ -106,17 +109,19 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
 
     return Scaffold(
       appBar: AppBar(
-      title: Text(
-      "Banks Overview",
-      style: theme.textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w600,
+        title: Text(
+          "Banks Overview",
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor:
+            theme.colorScheme.surface, // AppBar is also a 'surface' element
+        automaticallyImplyLeading:
+            false, // You can set this to true if you add a drawer/back button
       ),
-    ),
-    centerTitle: true,
-    elevation: 0,
-    backgroundColor: theme.colorScheme.surface, // AppBar is also a 'surface' element
-    automaticallyImplyLeading: false, // You can set this to true if you add a drawer/back button
-    ),
       body: Column(
         children: [
           // Bank Selector (stays fixed at top)
@@ -169,67 +174,69 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
                   : rates.isEmpty
                   ? const Center(child: Text("No rates available."))
                   : CustomScrollView(
-                slivers: [
-                  // Bank Logo Section
-                  if (logoUrl.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Center(
-                          child: Container(
-                            height: 100,
-                            width: 100,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(100),
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
+                      slivers: [
+                        // Bank Logo Section
+                        if (logoUrl.isNotEmpty)
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Center(
+                                child: Container(
+                                  height: 100,
+                                  width: 100,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(100),
+                                    color: Colors.white,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.network(
+                                    logoUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const SizedBox(),
+                                  ),
                                 ),
-                              ],
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Image.network(
-                              logoUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const SizedBox(),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
 
-                  // Rates List
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                        final rate = rates[index];
-                        final txnRate = bankRates?.transactionRates.firstWhere(
-                              (t) => t.currencyCode == rate.currencyCode,
-                          orElse: () => rate,
-                        );
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
-                          ),
-                          child: BankCurrencyRateItem(
-                            currencyName: rate.currencyName ?? 'Unknown',
-                            currencyCode: rate.currencyCode ?? 'N/A',
-                            cashBuying: rate.buying ?? 0.0,
-                            cashSelling: rate.selling ?? 0.0,
-                            transactionBuying: txnRate?.buying ?? 0.0,
-                            transactionSelling: txnRate?.selling ?? 0.0,
-                          ),
-                        );
-                      },
-                      childCount: rates.length,
+                        // Rates List
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final rate = rates[index];
+                            final txnRate = bankRates?.transactionRates
+                                .firstWhere(
+                                  (t) => t.currencyCode == rate.currencyCode,
+                                  orElse: () => rate,
+                                );
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 6,
+                              ),
+                              child: BankCurrencyRateItem(
+                                currencyName: rate.currencyName ?? 'Unknown',
+                                currencyCode: rate.currencyCode ?? 'N/A',
+                                cashBuying: rate.buying ?? 0.0,
+                                cashSelling: rate.selling ?? 0.0,
+                                transactionBuying: txnRate?.buying ?? 0.0,
+                                transactionSelling: txnRate?.selling ?? 0.0,
+                              ),
+                            );
+                          }, childCount: rates.length),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],

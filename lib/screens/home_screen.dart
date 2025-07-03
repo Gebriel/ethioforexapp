@@ -111,6 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
+          // Currency Selector - Now matches BankOverviewScreen exactly
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
             child: Container(
@@ -146,6 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -157,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   : rates.isEmpty
                   ? const Center(child: Text("No exchange rates found."))
                   : ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 children: rates.map((r) {
                   final txn = currencyRates!.transactionRates.firstWhere(
                         (t) => t.bankCode == r.bankCode,
@@ -171,14 +173,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     bank = null;
                   }
 
-                  return RateListItem(
-                    bankName: r.bankName,
-                    bankLogo: bank?.bankLogo ?? '',
-                    currency: selectedCurrency!,
-                    cashBuying: r.buying,
-                    cashSelling: r.selling,
-                    transactionBuying: txn.buying,
-                    transactionSelling: txn.selling,
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: RateListItem(
+                      bankName: r.bankName,
+                      bankLogo: bank?.bankLogo ?? '',
+                      currency: selectedCurrency!,
+                      cashBuying: r.buying,
+                      cashSelling: r.selling,
+                      transactionBuying: txn.buying,
+                      transactionSelling: txn.selling,
+                    ),
                   );
                 }).toList(),
               ),
