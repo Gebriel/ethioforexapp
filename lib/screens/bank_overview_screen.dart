@@ -18,12 +18,22 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
   bool isLoading = false;
   bool hasLoadedOnce = false;
 
+  // Filter
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadPreferences();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> loadPreferences() async {
@@ -50,8 +60,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
 
     try {
       await _repository.initialize();
-      final defaultCode =
-          _repository.banks.any((b) => b.bankCode == selectedBankCode)
+      final defaultCode = _repository.banks.any((b) => b.bankCode == selectedBankCode)
           ? selectedBankCode!
           : _repository.banks.first.bankCode;
 
@@ -90,19 +99,109 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
     }
   }
 
+  List<Map<String, dynamic>> _getFilteredRates() {
+    final bankRates = selectedBankCode != null
+        ? _repository.getCachedRates(selectedBankCode!)
+        : null;
+    final rates = bankRates?.cashRates ?? [];
+
+    List<Map<String, dynamic>> rateData = rates.map((rate) {
+      final txn = bankRates?.transactionRates.firstWhere(
+            (t) => t.currencyCode == rate.currencyCode,
+        orElse: () => rate,
+      );
+
+      return {
+        'rate': rate,
+        'txn': txn,
+        'currencyName': rate.currencyName ?? '',
+        'currencyCode': rate.currencyCode ?? '',
+      };
+    }).toList();
+
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      rateData = rateData.where((item) {
+        return item['currencyName'].toLowerCase().contains(query) ||
+            item['currencyCode'].toLowerCase().contains(query);
+      }).toList();
+    }
+
+    return rateData;
+  }
+
+  Widget _buildFilterBar() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Search Field
+          Container(
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search currencies...',
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                  icon: Icon(Icons.clear, color: colorScheme.onSurfaceVariant),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface,
+              ),
+              onChanged: (value) {
+                setState(() => _searchQuery = value);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bankRates = selectedBankCode != null
         ? _repository.getCachedRates(selectedBankCode!)
         : null;
-    final rates = bankRates?.cashRates ?? [];
+    final filteredRates = _getFilteredRates();
 
     Bank? selectedBank;
     if (selectedBankCode != null && _repository.banks.isNotEmpty) {
-
       selectedBank = _repository.banks.firstWhere(
-        (b) => b.bankCode == selectedBankCode,
+            (b) => b.bankCode == selectedBankCode,
         orElse: () => Bank(bankCode: '', bankName: '', bankLogo: ''),
       );
     }
@@ -112,20 +211,16 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
       appBar: AppBar(
         title: Text(
           "Banks Overview",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor:
-            theme.colorScheme.surface, // AppBar is also a 'surface' element
-        automaticallyImplyLeading:
-            false, // You can set this to true if you add a drawer/back button
+        backgroundColor: theme.colorScheme.surface,
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
-          // Bank Selector (stays fixed at top)
+          // Bank Selector
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
             child: Container(
@@ -163,7 +258,8 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Main scrollable content (logo + rates)
+          if (hasLoadedOnce && filteredRates.isNotEmpty) _buildFilterBar(),
+
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
@@ -172,73 +268,61 @@ class _BankOverviewScreenState extends State<BankOverviewScreen> {
               },
               child: !hasLoadedOnce
                   ? const Center(child: CircularProgressIndicator())
-                  : rates.isEmpty
+                  : filteredRates.isEmpty
                   ? const Center(child: Text("No rates available."))
                   : CustomScrollView(
-                      slivers: [
-                        // Bank Logo Section
-                        if (logoUrl.isNotEmpty)
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Center(
-                                child: Container(
-                                  height: 100,
-                                  width: 100,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(100),
-                                    color: Colors.white,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Image.network(
-                                    logoUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        const SizedBox(),
-                                  ),
+                slivers: [
+                  if (logoUrl.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Center(
+                          child: Container(
+                            height: 100,
+                            width: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(100),
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
                                 ),
-                              ),
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Image.network(
+                              logoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox(),
                             ),
                           ),
-
-                        // Rates List
-                        SliverList(
-                          delegate: SliverChildBuilderDelegate((
-                            context,
-                            index,
-                          ) {
-                            final rate = rates[index];
-                            final txnRate = bankRates?.transactionRates
-                                .firstWhere(
-                                  (t) => t.currencyCode == rate.currencyCode,
-                                  orElse: () => rate,
-                                );
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 6,
-                              ),
-                              child: BankCurrencyRateItem(
-                                currencyName: rate.currencyName ?? 'Unknown',
-                                currencyCode: rate.currencyCode ?? 'N/A',
-                                cashBuying: rate.buying ?? 0.0,
-                                cashSelling: rate.selling ?? 0.0,
-                                transactionBuying: txnRate?.buying ?? 0.0,
-                                transactionSelling: txnRate?.selling ?? 0.0,
-                                updated: bankRates?.updated
-                              ),
-                            );
-                          }, childCount: rates.length),
                         ),
-                      ],
+                      ),
                     ),
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                        final item = filteredRates[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                          child: BankCurrencyRateItem(
+                            currencyName: item['currencyName'],
+                            currencyCode: item['currencyCode'],
+                            cashBuying: item['rate'].buying ?? 0.0,
+                            cashSelling: item['rate'].selling ?? 0.0,
+                            transactionBuying: item['txn']?.buying ?? 0.0,
+                            transactionSelling: item['txn']?.selling ?? 0.0,
+                            updated: bankRates?.updated ?? DateTime.now(),
+                          ),
+                        );
+                      },
+                      childCount: filteredRates.length,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
