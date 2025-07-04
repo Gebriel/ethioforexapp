@@ -17,6 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? selectedCurrency;
   bool isLoading = false;
   bool hasLoadedOnce = false;
+  String? errorMessage; // Add error state
 
   // Filter and Sort variables
   final TextEditingController _searchController = TextEditingController();
@@ -62,7 +63,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _repository.isInitialized &&
         selectedCurrency != null &&
         _repository.getCachedRates(selectedCurrency!) != null) {
-      setState(() => hasLoadedOnce = true);
+      setState(() {
+        hasLoadedOnce = true;
+        errorMessage = null; // Clear any previous errors
+      });
       return;
     }
 
@@ -80,33 +84,78 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedCurrency = defaultCode;
         isLoading = false;
         hasLoadedOnce = true;
+        errorMessage = null; // Clear error on success
       });
     } catch (e) {
       setState(() {
         isLoading = false;
         hasLoadedOnce = true;
+        errorMessage = _getErrorMessage(e); // Set error message
       });
     }
   }
 
   Future<void> fetchRates(String code) async {
     if (_repository.getCachedRates(code) != null) {
-      setState(() => selectedCurrency = code);
+      setState(() {
+        selectedCurrency = code;
+        errorMessage = null; // Clear error when using cached data
+      });
       await saveCurrencyPreference(code);
       return;
     }
 
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorMessage = null; // Clear previous errors
+    });
+
     try {
       await _repository.getRates(code);
       setState(() {
         selectedCurrency = code;
         isLoading = false;
+        errorMessage = null; // Clear error on success
       });
       await saveCurrencyPreference(code);
     } catch (e) {
-      setState(() => isLoading = false);
+      setState(() {
+        isLoading = false;
+        errorMessage = _getErrorMessage(e); // Set error message
+      });
     }
+  }
+
+  // Helper method to get user-friendly error messages
+  String _getErrorMessage(dynamic error) {
+    // You can customize this based on your specific error types
+    if (error.toString().contains('SocketException') ||
+        error.toString().contains('NetworkException')) {
+      return 'No internet connection. Please check your network and try again.';
+    } else if (error.toString().contains('TimeoutException')) {
+      return 'Request timeout. Please try again.';
+    } else if (error.toString().contains('FormatException')) {
+      return 'Invalid data received. Please try again.';
+    } else {
+      return 'Something went wrong. Please try again.';
+    }
+  }
+
+  // Check if we have valid data to show
+  bool get hasValidData {
+    return hasLoadedOnce &&
+        errorMessage == null &&
+        selectedCurrency != null &&
+        _repository.getCachedRates(selectedCurrency!) != null;
+  }
+
+  // Retry method
+  Future<void> retry() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null; // Clear error when retrying
+    });
+    await fetchInitialData(force: true);
   }
 
   // Filter and Sort methods
@@ -345,11 +394,61 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Build error state widget
+  Widget _buildErrorState() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Oops!',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              errorMessage ?? 'Something went wrong',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurface.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: isLoading ? null : retry,
+              icon: isLoading
+                  ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+                  : const Icon(Icons.refresh),
+              label: Text(isLoading ? 'Retrying...' : 'Try Again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currencies = _repository.currencies;
-    final filteredRates = _getFilteredAndSortedRates();
+    final filteredRates = hasValidData ? _getFilteredAndSortedRates() : [];
 
     return Scaffold(
       appBar: AppBar(
@@ -366,46 +465,48 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          // Currency Selector
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                color: theme.cardColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+          // Currency Selector - Only show when we have valid data
+          if (hasValidData) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: theme.cardColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: selectedCurrency,
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    items: currencies.map((c) {
+                      return DropdownMenuItem<String>(
+                        value: c.currencyCode,
+                        child: Text("${c.currencyName} (${c.currencyCode})"),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        fetchRates(val);
+                      }
+                    },
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  value: selectedCurrency,
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                  items: currencies.map((c) {
-                    return DropdownMenuItem<String>(
-                      value: c.currencyCode,
-                      child: Text("${c.currencyName} (${c.currencyCode})"),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) {
-                      fetchRates(val);
-                    }
-                  },
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
+          ],
 
-          // Filter and Sort Bar - Always visible when data is loaded
-          if (hasLoadedOnce && _repository.getCachedRates(selectedCurrency!)?.cashRates.isNotEmpty == true)
+          // Filter and Sort Bar - Only show when we have valid data
+          if (hasValidData && filteredRates.isNotEmpty)
             _buildFilterBar(),
 
           Expanded(
@@ -416,6 +517,8 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: !hasLoadedOnce
                   ? const Center(child: CircularProgressIndicator())
+                  : errorMessage != null
+                  ? _buildErrorState() // Show error state
                   : filteredRates.isEmpty
                   ? Center(
                 child: Column(

@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 import '../config/api_config.dart';
 import '../models/bank.dart';
 import '../models/bank_rates_response.dart';
 import '../models/currency.dart';
 import '../models/currency_rates_response.dart';
+import '../models/history_rates_response.dart';
 
 class ApiService {
   static Future<List<Currency>> fetchCurrencies() async {
-    print('Fetching currencies');
+    debugPrint('Fetching currencies');
     final uri = Uri.parse('$baseUrl/api/currencies');
     final res = await http.get(uri, headers: {'x-api-key': apiKey});
 
@@ -21,7 +23,7 @@ class ApiService {
   }
 
   static Future<CurrencyRatesResponse> fetchRatesByCurrency(String currencyCode) async {
-    print('Fetching rates for currencyCode: $currencyCode');
+    debugPrint('Fetching rates for currencyCode: $currencyCode');
     final uri = Uri.parse('$baseUrl/api/currency/$currencyCode');
     final res = await http.get(uri, headers: {'x-api-key': apiKey});
 
@@ -34,7 +36,7 @@ class ApiService {
   }
 
   static Future<List<Bank>> fetchBanks() async {
-    print('Fetching banks');
+    debugPrint('Fetching banks');
     final uri = Uri.parse('$baseUrl/api/banks');
     final res = await http.get(uri, headers: {'x-api-key': apiKey});
     if (res.statusCode == 200) {
@@ -46,7 +48,7 @@ class ApiService {
   }
 
   static Future<BankRatesResponse> fetchBankRates(String bankCode) async {
-    print('Fetching bank rates for bankCode: $bankCode');
+    debugPrint('Fetching bank rates for bankCode: $bankCode');
     final uri = Uri.parse('$baseUrl/api/bank/$bankCode');
     final res = await http.get(uri, headers: {'x-api-key': apiKey});
 
@@ -57,4 +59,18 @@ class ApiService {
       throw Exception("Failed to fetch bank rates");
     }
   }
+
+  static Future<HistoryRatesResponse> fetchUsdHistoryForBank(String bankCode) async {
+    debugPrint('Fetching USD history for $bankCode');
+    final uri = Uri.parse('$baseUrl/api/bank/$bankCode/currency/USD');
+    final res = await http.get(uri, headers: {'x-api-key': apiKey});
+
+    if (res.statusCode == 200) {
+      final jsonData = json.decode(res.body);
+      return HistoryRatesResponse.fromJson(jsonData);
+    } else {
+      throw Exception("Failed to fetch USD history for $bankCode");
+    }
+  }
+
 }
