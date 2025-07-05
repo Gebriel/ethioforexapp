@@ -15,17 +15,22 @@ class BankOverviewScreen extends StatefulWidget {
 }
 
 class _BankOverviewScreenState extends State<BankOverviewScreen>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, TickerProviderStateMixin {
   final BankRepository _repository = BankRepository();
   final UsdHistoryRepository _usdHistoryRepository = UsdHistoryRepository();
   static const String _bankPrefKey = 'selected_bank';
   String? selectedBankCode;
   bool isLoading = false;
   bool hasLoadedOnce = false;
-  String? errorMessage; // Add error state
+  String? errorMessage;
 
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
+  bool _isSearchActive = false;
+  bool _isFilterVisible = false;
+  late AnimationController _filterAnimationController;
+  late Animation<double> _filterAnimation;
 
   HistoryRatesResponse? usdHistory;
   bool isUsdLoading = false;
@@ -33,6 +38,21 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
   @override
   void initState() {
     super.initState();
+    _filterAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _filterAnimation = CurvedAnimation(
+      parent: _filterAnimationController,
+      curve: Curves.easeInOut,
+    );
+
+    _searchFocusNode.addListener(() {
+      setState(() {
+        _isSearchActive = _searchFocusNode.hasFocus;
+      });
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadPreferences();
     });
@@ -41,11 +61,25 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
+    _filterAnimationController.dispose();
     super.dispose();
   }
 
   @override
   bool get wantKeepAlive => true;
+
+  void _toggleFilter() {
+    setState(() {
+      _isFilterVisible = !_isFilterVisible;
+    });
+    if (_isFilterVisible) {
+      _filterAnimationController.forward();
+    } else {
+      _filterAnimationController.reverse();
+      _searchFocusNode.unfocus();
+    }
+  }
 
   Future<void> loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -65,7 +99,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
         _repository.getCachedRates(selectedBankCode!) != null) {
       setState(() {
         hasLoadedOnce = true;
-        errorMessage = null; // Clear any previous errors
+        errorMessage = null;
       });
       await _maybeFetchUsdHistory(selectedBankCode!);
       return;
@@ -86,26 +120,26 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
         selectedBankCode = defaultCode;
         isLoading = false;
         hasLoadedOnce = true;
-        errorMessage = null; // Clear error on success
+        errorMessage = null;
       });
     } catch (e) {
       setState(() {
         isLoading = false;
         hasLoadedOnce = true;
-        errorMessage = _getErrorMessage(e); // Set error message
+        errorMessage = _getErrorMessage(e);
       });
     }
   }
 
   Future<void> loadRates(String bankCode) async {
     if (_repository.getCachedRates(bankCode) != null && bankCode == selectedBankCode) {
-      setState(() => errorMessage = null); // Clear error when using cached data
+      setState(() => errorMessage = null);
       return;
     }
 
     setState(() {
       isLoading = true;
-      errorMessage = null; // Clear previous errors
+      errorMessage = null;
     });
 
     try {
@@ -114,20 +148,18 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
       setState(() {
         selectedBankCode = bankCode;
         isLoading = false;
-        errorMessage = null; // Clear error on success
+        errorMessage = null;
       });
       await saveBankPreference(bankCode);
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage = _getErrorMessage(e); // Set error message
+        errorMessage = _getErrorMessage(e);
       });
     }
   }
 
-  // Helper method to get user-friendly error messages
   String _getErrorMessage(dynamic error) {
-    // You can customize this based on your specific error types
     if (error.toString().contains('SocketException') ||
         error.toString().contains('NetworkException')) {
       return 'No internet connection. Please check your network and try again.';
@@ -140,7 +172,6 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
     }
   }
 
-  // Check if we have valid data to show
   bool get hasValidData {
     return hasLoadedOnce &&
         errorMessage == null &&
@@ -148,17 +179,15 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
         _repository.getCachedRates(selectedBankCode!) != null;
   }
 
-  // Retry method
   Future<void> retry() async {
     setState(() {
       isLoading = true;
-      errorMessage = null; // Clear error when retrying
+      errorMessage = null;
     });
     await loadInitialData(force: true);
   }
 
   Future<void> _maybeFetchUsdHistory(String bankCode) async {
-    // Only fetch if we don't have data or if it's a different bank
     if (usdHistory != null && selectedBankCode == bankCode) return;
 
     final cached = _usdHistoryRepository.getCached(bankCode);
@@ -222,58 +251,128 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
     return rateData;
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildCompactFilterBar() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search currencies...',
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                  icon: Icon(
-                    Icons.clear,
-                    color: colorScheme.onSurfaceVariant,
+    return AnimatedBuilder(
+      animation: _filterAnimation,
+      builder: (context, child) {
+        return Container(
+          height: _filterAnimation.value * 80, // Smaller height for just search
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.shadow.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Search Bar
+                    Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Search currencies...',
+                          hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: colorScheme.onSurfaceVariant,
+                            size: 20,
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              color: colorScheme.onSurfaceVariant,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurface,
+                        ),
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              onChanged: (val) => setState(() => _searchQuery = val),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterStatusBar() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    if (_searchQuery.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.search,
+            size: 16,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Search: "$_searchQuery"',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              _searchController.clear();
+              setState(() => _searchQuery = '');
+            },
+            child: Icon(
+              Icons.clear,
+              size: 16,
+              color: colorScheme.primary,
             ),
           ),
         ],
@@ -281,7 +380,6 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
     );
   }
 
-  // Build error state widget
   Widget _buildErrorState() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -362,9 +460,19 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
         backgroundColor: theme.colorScheme.surface,
         automaticallyImplyLeading: false,
       ),
+      floatingActionButton: hasValidData && filteredRates.isNotEmpty
+          ? FloatingActionButton(
+        onPressed: _toggleFilter,
+        child: AnimatedRotation(
+          turns: _isFilterVisible ? 0.5 : 0,
+          duration: const Duration(milliseconds: 300),
+          child: Icon(_isFilterVisible ? Icons.close : Icons.search),
+        ),
+      )
+          : null,
       body: Column(
         children: [
-          // Bank Selector - Only show when we have valid data
+          // Bank Selector
           if (hasValidData) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
@@ -404,8 +512,13 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
             const SizedBox(height: 16),
           ],
 
-          // Filter Bar - Only show when we have valid data
-          if (hasValidData && filteredRates.isNotEmpty) _buildFilterBar(),
+          // Filter Status Bar
+          if (hasValidData && filteredRates.isNotEmpty)
+            _buildFilterStatusBar(),
+
+          // Animated Filter Bar
+          if (hasValidData && filteredRates.isNotEmpty)
+            _buildCompactFilterBar(),
 
           Expanded(
             child: RefreshIndicator(
@@ -417,7 +530,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
               child: !hasLoadedOnce || isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : errorMessage != null
-                  ? _buildErrorState() // Show error state
+                  ? _buildErrorState()
                   : filteredRates.isEmpty
                   ? Center(
                 child: Column(

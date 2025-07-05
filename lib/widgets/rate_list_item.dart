@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Import for date formatting
+import 'package:intl/intl.dart';
 
 class RateListItem extends StatelessWidget {
   final String bankName;
@@ -23,157 +23,177 @@ class RateListItem extends StatelessWidget {
     this.updatedAt,
   });
 
-  // Original _formatRate logic: Shows actual value (including 0.0000) or '-' for null.
   String _formatRate(double value) {
-    // Note: The original code passed `double` directly, implying non-null.
-    // If it could be null, the parameter type would need to be `double?`.
-    // Assuming it's guaranteed to be non-null for now as per original _buildRateCard.
     return value.toStringAsFixed(4);
   }
 
+  void _showLastUpdatedInfo(BuildContext context) {
+    if (updatedAt == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Last updated: ${DateFormat('MMM d, yyyy hh:mm a').format(updatedAt!)}',
+        ),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme; // Use theme.colorScheme for consistency
+    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        // Use theme.colorScheme.surface for consistency
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1), // Use theme.colorScheme.shadow
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: colorScheme.shadow.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row - Bank info and code
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Bank logo and name
+              if (bankLogo != null && bankLogo!.isNotEmpty)
+                CircleAvatar(
+                  backgroundImage: NetworkImage(bankLogo!),
+                  radius: 14,
+                  backgroundColor: Colors.transparent,
+                )
+              else
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: colorScheme.surfaceContainerHighest,
+                  child: Icon(
+                    Icons.account_balance,
+                    size: 14,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  bankName,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              // Bank code and info icon
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (bankLogo != null && bankLogo!.isNotEmpty)
-                    CircleAvatar(
-                      backgroundImage: NetworkImage(bankLogo!),
-                      radius: 16,
-                      backgroundColor: Colors.transparent,
-                    )
-                  else
-                    CircleAvatar(
-                      radius: 16,
-                      // Use theme colors for consistency
-                      backgroundColor: isDark ? colorScheme.surfaceContainerHighest : colorScheme.surfaceContainerHighest,
-                      child: Icon(
-                        Icons.account_balance,
-                        size: 16,
-                        color: isDark ? colorScheme.onSurface : colorScheme.onSurface,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      bankCode,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
                       ),
                     ),
-                  const SizedBox(width: 12),
-                  Text(
-                    bankName,
-                    style: theme.textTheme.titleMedium?.copyWith( // Use theme.textTheme
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface, // Use theme.colorScheme
-                    ),
                   ),
+                  if (updatedAt != null) ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => _showLastUpdatedInfo(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  bankCode,
-                  style: theme.textTheme.labelMedium?.copyWith( // Use theme.textTheme
-                    color: theme.colorScheme.onPrimary,
-                    fontWeight: FontWeight.bold,
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Rates Grid - 2x2 layout
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildCompactRateCard(
+                        context,
+                        "Cash Buy",
+                        cashBuying,
+                        Icons.trending_up,
+                        colorScheme.surfaceContainerHighest,
+                      ),
+                      const SizedBox(height: 6),
+                      _buildCompactRateCard(
+                        context,
+                        "Txn Buy",
+                        transactionBuying,
+                        Icons.account_balance_wallet,
+                        colorScheme.surfaceContainerHighest,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildRateCard(
-                  context,
-                  "Cash Buy",
-                  cashBuying,
-                  colorScheme.surfaceContainerHighest, // Use theme.colorScheme
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildCompactRateCard(
+                        context,
+                        "Cash Sell",
+                        cashSelling,
+                        Icons.trending_down,
+                        colorScheme.surfaceContainerHighest,
+                      ),
+                      const SizedBox(height: 6),
+                      _buildCompactRateCard(
+                        context,
+                        "Txn Sell",
+                        transactionSelling,
+                        Icons.account_balance_wallet,
+                        colorScheme.surfaceContainerHighest,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildRateCard(
-                  context,
-                  "Cash Sell",
-                  cashSelling,
-                  colorScheme.surfaceContainerHighest, // Use theme.colorScheme
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildRateCard(
-                  context,
-                  "Txn Buy",
-                  transactionBuying,
-                  colorScheme.surfaceContainerHighest, // Use theme.colorScheme
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildRateCard(
-                  context,
-                  "Txn Sell",
-                  transactionSelling,
-                  colorScheme.surfaceContainerHighest, // Use theme.colorScheme
-                ),
-              ),
-            ],
-          ),
-          // Added Updated At
-          if (updatedAt != null) ...[
-            const SizedBox(height: 16),
-            Divider(color: colorScheme.outline, thickness: 0.5), // Use theme.colorScheme
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                'Last updated: ${DateFormat('MMM d, hh:mm a').format(updatedAt!)}',
-                style: theme.textTheme.bodySmall?.copyWith( // Use theme.textTheme
-                  color: colorScheme.onSurfaceVariant, // Use theme.colorScheme for good contrast
-                ),
-              ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRateCard(BuildContext context, String label, double value, Color bgColor) {
+  Widget _buildCompactRateCard(BuildContext context, String label, double value, IconData icon, Color bgColor) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme; // Use theme.colorScheme
+    final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
@@ -181,18 +201,33 @@ class RateListItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith( // Use theme.textTheme
-              color: colorScheme.onSurfaceVariant, // Use theme.colorScheme for good contrast
-            ),
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 12,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
-            _formatRate(value), // Use _formatRate for consistency
-            style: theme.textTheme.bodyMedium?.copyWith( // Use theme.textTheme
+            _formatRate(value),
+            style: theme.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface, // Use theme.colorScheme for good contrast
+              color: colorScheme.onSurface,
+              fontSize: 12,
             ),
           ),
         ],

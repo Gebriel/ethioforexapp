@@ -21,126 +21,170 @@ class BankCurrencyRateItem extends StatelessWidget {
     this.updated,
   });
 
+  String _formatRate(double? value) {
+    return value != null ? value.toStringAsFixed(4) : '-';
+  }
+
+  void _showLastUpdatedInfo(BuildContext context) {
+    if (updated == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Last updated: ${DateFormat('MMM d, yyyy hh:mm a').format(updated!)}',
+        ),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme; // Use theme.colorScheme for consistency
+    final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1), // Use theme.co
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: colorScheme.shadow.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row - Currency info and code
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                currencyName ?? 'Unknown',
-                style: theme.textTheme.titleMedium?.copyWith( // Use theme.textTheme
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface, // Use theme.colorScheme
+              // Currency icon and name
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                child: Icon(
+                  Icons.currency_exchange,
+                  size: 14,
+                  color: colorScheme.onSurface,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(4),
-                ),
+              const SizedBox(width: 10),
+              Expanded(
                 child: Text(
-                  currencyCode ?? 'N/A',
-                  style: TextStyle(
-                    color: theme.colorScheme.onPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
+                  currencyName ?? 'Unknown',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildRateCard(
-                  context,
-                  "Cash Buy",
-                  cashBuying,
-                  colorScheme.surfaceContainerHighest,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildRateCard(
-                  context,
-                  "Cash Sell",
-                  cashSelling,
-                  colorScheme.surfaceContainerHighest,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildRateCard(
-                  context,
-                  "Txn Buy",
-                  transactionBuying,
-                  colorScheme.surfaceContainerHighest,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildRateCard(
-                  context,
-                  "Txn Sell",
-                  transactionSelling,
-                  colorScheme.surfaceContainerHighest,
-                ),
+              // Currency code and info icon
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      currencyCode ?? 'N/A',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                  if (updated != null) ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => _showLastUpdatedInfo(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
-          // Added Updated At
-          if (updated != null) ...[
-            const SizedBox(height: 16),
-            Divider(color: colorScheme.outline, thickness: 0.5), // Use theme.colorScheme
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                'Last updated: ${DateFormat('MMM d, hh:mm a').format(updated!)}',
-                style: theme.textTheme.bodySmall?.copyWith( // Use theme.textTheme
-                  color: colorScheme.onSurfaceVariant, // Use theme.colorScheme for good contrast
+          const SizedBox(height: 12),
+          // Rates Grid - 2x2 layout
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildCompactRateCard(
+                        context,
+                        "Cash Buy",
+                        cashBuying,
+                        Icons.trending_up,
+                        colorScheme.surfaceContainerHighest,
+                      ),
+                      const SizedBox(height: 6),
+                      _buildCompactRateCard(
+                        context,
+                        "Txn Buy",
+                        transactionBuying,
+                        Icons.account_balance_wallet,
+                        colorScheme.surfaceContainerHighest,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildCompactRateCard(
+                        context,
+                        "Cash Sell",
+                        cashSelling,
+                        Icons.trending_down,
+                        colorScheme.surfaceContainerHighest,
+                      ),
+                      const SizedBox(height: 6),
+                      _buildCompactRateCard(
+                        context,
+                        "Txn Sell",
+                        transactionSelling,
+                        Icons.account_balance_wallet,
+                        colorScheme.surfaceContainerHighest,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRateCard(BuildContext context, String label, double? value, Color bgColor) {
+  Widget _buildCompactRateCard(BuildContext context, String label, double? value, IconData icon, Color bgColor) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme; // Use theme.colorScheme
+    final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
@@ -148,18 +192,33 @@ class BankCurrencyRateItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith( // Use theme.textTheme
-              color: colorScheme.onSurfaceVariant, // Use theme.colorScheme for good contrast
-            ),
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 12,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
-            value != null ? value.toStringAsFixed(4) : '-',
-            style: theme.textTheme.bodyMedium?.copyWith( // Use theme.textTheme
+            _formatRate(value),
+            style: theme.textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface, // Use theme.colorScheme for good contrast
+              color: colorScheme.onSurface,
+              fontSize: 12,
             ),
           ),
         ],

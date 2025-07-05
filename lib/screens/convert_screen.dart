@@ -25,7 +25,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
 
   bool isLoading = true;
   bool hasLoadedOnce = false;
-  String? errorMessage; // Add error state
+  String? errorMessage;
 
   @override
   void initState() {
@@ -65,7 +65,6 @@ class _ConvertScreenState extends State<ConvertScreen> {
   }
 
   Future<void> loadRates(String bankCode) async {
-    // Check if we have cached rates for this bank
     if (_repository.getCachedRates(bankCode) != null && bankCode == selectedBankCode) {
       setState(() => errorMessage = null);
       return;
@@ -84,14 +83,13 @@ class _ConvertScreenState extends State<ConvertScreen> {
         isLoading = false;
         errorMessage = null;
 
-        // Ensure selectedCurrencyCode defaults to first available if current isn't in new bank's rates
         final newCurrencyList = useTransaction ? result.transactionRates : result.cashRates;
         if (selectedCurrencyCode == null || !newCurrencyList.any((r) => r.currencyCode == selectedCurrencyCode)) {
           selectedCurrencyCode = newCurrencyList.isNotEmpty
               ? newCurrencyList.first.currencyCode
               : null;
         }
-        useTransaction = false; // Reset transaction toggle when bank changes
+        useTransaction = false;
       });
       calculateConversion();
     } catch (e) {
@@ -102,7 +100,6 @@ class _ConvertScreenState extends State<ConvertScreen> {
     }
   }
 
-  // Helper method to get user-friendly error messages
   String _getErrorMessage(dynamic error) {
     if (error.toString().contains('SocketException') ||
         error.toString().contains('NetworkException')) {
@@ -116,7 +113,6 @@ class _ConvertScreenState extends State<ConvertScreen> {
     }
   }
 
-  // Check if we have valid data to show
   bool get hasValidData {
     return hasLoadedOnce &&
         errorMessage == null &&
@@ -124,7 +120,6 @@ class _ConvertScreenState extends State<ConvertScreen> {
         bankRates != null;
   }
 
-  // Retry method
   Future<void> retry() async {
     setState(() {
       isLoading = true;
@@ -163,7 +158,6 @@ class _ConvertScreenState extends State<ConvertScreen> {
     setState(() => convertedAmount = result);
   }
 
-  // Build error state widget
   Widget _buildErrorState() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -218,7 +212,6 @@ class _ConvertScreenState extends State<ConvertScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
         title: Text(
           "Currency Converter",
@@ -231,16 +224,62 @@ class _ConvertScreenState extends State<ConvertScreen> {
         backgroundColor: theme.colorScheme.surface,
         automaticallyImplyLeading: false,
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _repository.forceRefresh();
-          await loadInitial(force: true);
-        },
-        child: !hasLoadedOnce || isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : errorMessage != null
-            ? _buildErrorState()
-            : _buildMainContent(theme),
+      body: Column(
+        children: [
+          // Bank Selector - Compact like HomeScreen
+          if (hasValidData) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: theme.cardColor,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: selectedBankCode,
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    items: _repository.banks.map((bank) {
+                      return DropdownMenuItem<String>(
+                        value: bank.bankCode,
+                        child: Text(bank.bankName),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        loadRates(val);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await _repository.forceRefresh();
+                await loadInitial(force: true);
+              },
+              child: !hasLoadedOnce
+                  ? const Center(child: CircularProgressIndicator())
+                  : errorMessage != null
+                  ? _buildErrorState()
+                  : _buildMainContent(theme),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -279,7 +318,6 @@ class _ConvertScreenState extends State<ConvertScreen> {
       );
     }
 
-    // Ensure selectedCash and selectedTxn are valid before passing to BankCurrencyRateItem
     final selectedCash = cashRates.firstWhere(
           (r) => r.currencyCode == selectedCurrencyCode,
       orElse: () => cashRates.isNotEmpty ? cashRates.first :
@@ -292,21 +330,28 @@ class _ConvertScreenState extends State<ConvertScreen> {
     );
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Column(
         children: [
-          _buildConversionCard(theme),
-          const SizedBox(height: 16),
-          // Only show result card if there's a converted amount
-          if (convertedAmount != null && amountController.text.isNotEmpty) _buildResultCard(theme),
-          const SizedBox(height: 16),
-          _buildRatesCard(theme, selectedCash, selectedTxn),
+          // Currency & Options Card - More compact
+          _buildCompactControlsCard(theme),
+          const SizedBox(height: 12),
+
+          // Result Card - Only show if there's a result
+          if (convertedAmount != null && amountController.text.isNotEmpty)
+            _buildCompactResultCard(theme),
+
+          if (convertedAmount != null && amountController.text.isNotEmpty)
+            const SizedBox(height: 12),
+
+          // Rates Card - More compact
+          _buildCompactRatesCard(theme, selectedCash, selectedTxn),
         ],
       ),
     );
   }
 
-  Widget _buildConversionCard(ThemeData theme) {
+  Widget _buildCompactControlsCard(ThemeData theme) {
     final cashRates = bankRates?.cashRates ?? [];
     final hasValidTxnRate = bankRates?.transactionRates.any((r) =>
     r.currencyCode == selectedCurrencyCode &&
@@ -314,65 +359,159 @@ class _ConvertScreenState extends State<ConvertScreen> {
         r.selling > 0) ?? false;
 
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        color: theme.cardColor,
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.shadow.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Bank Selector
-          _buildDropdown(
-            context,
-            "Select Bank",
-            selectedBankCode,
-            _repository.banks.map((b) => b.bankCode).toList(),
-            _repository.banks.map((b) => b.bankName).toList(),
-                (val) {
-              if (val != null) {
-                loadRates(val);
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-
           // Currency Selector
-          _buildDropdown(
-            context,
-            "Select Currency",
-            selectedCurrencyCode,
-            cashRates.map((c) => c.currencyCode).toList(),
-            cashRates.map((c) => "${c.currencyName} (${c.currencyCode})").toList(),
-                (val) {
-              setState(() => selectedCurrencyCode = val);
-              calculateConversion();
-            },
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: theme.colorScheme.surfaceContainerHighest,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: selectedCurrencyCode,
+                  hint: const Text("Select Currency"),
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  items: cashRates.map((c) {
+                    return DropdownMenuItem<String>(
+                      value: c.currencyCode,
+                      child: Text("${c.currencyName} (${c.currencyCode})"),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() => selectedCurrencyCode = val);
+                    calculateConversion();
+                  },
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
+
+          // Amount Input & Direction Toggle in Row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(
+              children: [
+                // Amount Input
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: theme.colorScheme.surfaceContainerHighest,
+                    ),
+                    child: TextField(
+                      controller: amountController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        hintText: "0.00",
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        suffixText: birrToForeign ? "ETB" : selectedCurrencyCode ?? "",
+                      ),
+                      onChanged: (_) => calculateConversion(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Direction Toggle
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() => birrToForeign = true);
+                              calculateConversion();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: birrToForeign ? theme.colorScheme.primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  "ETB→",
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: birrToForeign
+                                        ? theme.colorScheme.onPrimary
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() => birrToForeign = false);
+                              calculateConversion();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: !birrToForeign ? theme.colorScheme.primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  "→ETB",
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: !birrToForeign
+                                        ? theme.colorScheme.onPrimary
+                                        : theme.colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           // Transaction Rate Toggle
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Use Transaction Rate",
+                  "Transaction Rate",
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 Switch.adaptive(
@@ -388,228 +527,40 @@ class _ConvertScreenState extends State<ConvertScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          // Amount Input
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                birrToForeign ? "Amount in ETB" : "Amount in ${selectedCurrencyCode ?? 'Foreign'}",
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: "0.00",
-                  hintStyle: theme.textTheme.headlineMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.4),
-                  ),
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerHighest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  suffixText: birrToForeign ? "ETB" : selectedCurrencyCode ?? "",
-                  suffixStyle: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                ),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                ),
-                onChanged: (_) => calculateConversion(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Conversion Direction Toggle
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Conversion Direction",
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.all(4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() => birrToForeign = true);
-                          calculateConversion();
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: birrToForeign
-                                ? theme.colorScheme.primary
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              "ETB → ${selectedCurrencyCode ?? ""}",
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: birrToForeign
-                                    ? theme.colorScheme.onPrimary
-                                    : theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() => birrToForeign = false);
-                          calculateConversion();
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: !birrToForeign
-                                ? theme.colorScheme.primary
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              "${selectedCurrencyCode ?? ""} → ETB",
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: !birrToForeign
-                                    ? theme.colorScheme.onPrimary
-                                    : theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildDropdown(
-      BuildContext context,
-      String label,
-      String? value,
-      List<String> itemValues,
-      List<String> itemLabels,
-      ValueChanged<String?> onChanged,
-      ) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w500,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: theme.colorScheme.surfaceContainerHighest,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: value,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-              dropdownColor: theme.colorScheme.surface,
-              icon: Icon(Icons.keyboard_arrow_down_rounded, color: theme.colorScheme.onSurfaceVariant),
-              items: List.generate(itemValues.length, (index) {
-                return DropdownMenuItem(
-                  value: itemValues[index],
-                  child: Text(
-                    itemLabels[index],
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurface,
-                    ),
-                  ),
-                );
-              }),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildResultCard(ThemeData theme) {
+  Widget _buildCompactResultCard(ThemeData theme) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        color: theme.cardColor,
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.shadow.withOpacity(0.08),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            "Converted Amount",
+            "Result",
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          const SizedBox(height: 8),
           Text(
             birrToForeign
                 ? "${convertedAmount!.toStringAsFixed(2)} ${selectedCurrencyCode!}"
                 : "${convertedAmount!.toStringAsFixed(2)} ETB",
-            style: theme.textTheme.displaySmall?.copyWith(
+            style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.primary,
             ),
@@ -619,23 +570,16 @@ class _ConvertScreenState extends State<ConvertScreen> {
     );
   }
 
-  Widget _buildRatesCard(ThemeData theme, BankCurrencyRate selectedCash, BankCurrencyRate selectedTxn) {
-    return Container(
+  Widget _buildCompactRatesCard(ThemeData theme, BankCurrencyRate selectedCash, BankCurrencyRate selectedTxn) {
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.all(0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          BankCurrencyRateItem(
-            currencyName: selectedCash.currencyName,
-            currencyCode: selectedCash.currencyCode,
-            cashBuying: selectedCash.buying,
-            cashSelling: selectedCash.selling,
-            transactionBuying: selectedTxn.buying,
-            transactionSelling: selectedTxn.selling,
-          ),
-        ],
+      child: BankCurrencyRateItem(
+        currencyName: selectedCash.currencyName,
+        currencyCode: selectedCash.currencyCode,
+        cashBuying: selectedCash.buying,
+        cashSelling: selectedCash.selling,
+        transactionBuying: selectedTxn.buying,
+        transactionSelling: selectedTxn.selling,
       ),
     );
   }

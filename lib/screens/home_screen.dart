@@ -11,25 +11,37 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final CurrencyRepository _repository = CurrencyRepository();
   static const String _currencyPrefKey = 'selected_currency';
   String? selectedCurrency;
   bool isLoading = false;
   bool hasLoadedOnce = false;
-  String? errorMessage; // Add error state
+  String? errorMessage;
 
   // Filter and Sort variables
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
-  String _sortBy = 'name'; // 'name', 'buying', 'selling', 'updated'
+  String _sortBy = 'name';
   bool _sortAscending = true;
   bool _isSearchActive = false;
+  bool _isFilterVisible = false; // New variable to control filter visibility
+  late AnimationController _filterAnimationController;
+  late Animation<double> _filterAnimation;
 
   @override
   void initState() {
     super.initState();
+    _filterAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _filterAnimation = CurvedAnimation(
+      parent: _filterAnimationController,
+      curve: Curves.easeInOut,
+    );
+
     _searchFocusNode.addListener(() {
       setState(() {
         _isSearchActive = _searchFocusNode.hasFocus;
@@ -44,7 +56,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _filterAnimationController.dispose();
     super.dispose();
+  }
+
+  void _toggleFilter() {
+    setState(() {
+      _isFilterVisible = !_isFilterVisible;
+    });
+    if (_isFilterVisible) {
+      _filterAnimationController.forward();
+    } else {
+      _filterAnimationController.reverse();
+      _searchFocusNode.unfocus(); // Hide keyboard when closing filter
+    }
   }
 
   Future<void> loadPreferences() async {
@@ -65,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _repository.getCachedRates(selectedCurrency!) != null) {
       setState(() {
         hasLoadedOnce = true;
-        errorMessage = null; // Clear any previous errors
+        errorMessage = null;
       });
       return;
     }
@@ -84,13 +109,13 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedCurrency = defaultCode;
         isLoading = false;
         hasLoadedOnce = true;
-        errorMessage = null; // Clear error on success
+        errorMessage = null;
       });
     } catch (e) {
       setState(() {
         isLoading = false;
         hasLoadedOnce = true;
-        errorMessage = _getErrorMessage(e); // Set error message
+        errorMessage = _getErrorMessage(e);
       });
     }
   }
@@ -99,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_repository.getCachedRates(code) != null) {
       setState(() {
         selectedCurrency = code;
-        errorMessage = null; // Clear error when using cached data
+        errorMessage = null;
       });
       await saveCurrencyPreference(code);
       return;
@@ -107,7 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       isLoading = true;
-      errorMessage = null; // Clear previous errors
+      errorMessage = null;
     });
 
     try {
@@ -115,20 +140,18 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         selectedCurrency = code;
         isLoading = false;
-        errorMessage = null; // Clear error on success
+        errorMessage = null;
       });
       await saveCurrencyPreference(code);
     } catch (e) {
       setState(() {
         isLoading = false;
-        errorMessage = _getErrorMessage(e); // Set error message
+        errorMessage = _getErrorMessage(e);
       });
     }
   }
 
-  // Helper method to get user-friendly error messages
   String _getErrorMessage(dynamic error) {
-    // You can customize this based on your specific error types
     if (error.toString().contains('SocketException') ||
         error.toString().contains('NetworkException')) {
       return 'No internet connection. Please check your network and try again.';
@@ -141,7 +164,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Check if we have valid data to show
   bool get hasValidData {
     return hasLoadedOnce &&
         errorMessage == null &&
@@ -149,22 +171,19 @@ class _HomeScreenState extends State<HomeScreen> {
         _repository.getCachedRates(selectedCurrency!) != null;
   }
 
-  // Retry method
   Future<void> retry() async {
     setState(() {
       isLoading = true;
-      errorMessage = null; // Clear error when retrying
+      errorMessage = null;
     });
     await fetchInitialData(force: true);
   }
 
-  // Filter and Sort methods
   List<dynamic> _getFilteredAndSortedRates() {
     final currencies = _repository.currencies;
     final currencyRates = selectedCurrency != null ? _repository.getCachedRates(selectedCurrency!) : null;
     final rates = currencyRates?.cashRates ?? [];
 
-    // Create list with all necessary data for filtering/sorting
     List<Map<String, dynamic>> rateData = rates.map((r) {
       final txn = currencyRates!.transactionRates.firstWhere(
             (t) => t.bankCode == r.bankCode,
@@ -193,7 +212,6 @@ class _HomeScreenState extends State<HomeScreen> {
       };
     }).toList();
 
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       rateData = rateData.where((item) {
         final bankName = item['bankName'].toString().toLowerCase();
@@ -203,7 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }).toList();
     }
 
-    // Sort the data
     rateData.sort((a, b) {
       int comparison = 0;
       switch (_sortBy) {
@@ -226,128 +243,146 @@ class _HomeScreenState extends State<HomeScreen> {
     return rateData;
   }
 
-  Widget _buildFilterBar() {
+  Widget _buildCompactFilterBar() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Search Bar
-          Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              decoration: InputDecoration(
-                hintText: 'Filter banks...',
-                hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                  icon: Icon(
-                    Icons.clear,
-                    color: colorScheme.onSurfaceVariant,
+    return AnimatedBuilder(
+      animation: _filterAnimation,
+      builder: (context, child) {
+        return Container(
+          height: _filterAnimation.value * 140, // Adjust height as needed
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.shadow.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() => _searchQuery = '');
-                  },
-                )
-                    : null,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ],
               ),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface,
-              ),
-              onChanged: (value) {
-                setState(() => _searchQuery = value);
-              },
-            ),
-          ),
-
-          // Sort Section - Always visible
-          const SizedBox(height: 16),
-
-          // Sort Options - Dynamic Layout
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.sort,
-                size: 18,
-                color: colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Sort',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildCompactSortChip('name', 'Name', Icons.account_balance),
-                    _buildCompactSortChip('buying', 'Buy', Icons.trending_up),
-                    _buildCompactSortChip('selling', 'Sell', Icons.trending_down),
-                    _buildCompactSortChip('updated', 'Time', Icons.schedule),
+                    // Search Bar
+                    Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Search banks...',
+                          hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: colorScheme.onSurfaceVariant,
+                            size: 20,
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                            icon: Icon(
+                              Icons.clear,
+                              color: colorScheme.onSurfaceVariant,
+                              size: 20,
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurface,
+                        ),
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
+                        },
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Sort Section
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.sort,
+                          size: 18,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Sort by:',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _buildSortChip('name', 'Name', Icons.account_balance),
+                                const SizedBox(width: 6),
+                                _buildSortChip('buying', 'Buy', Icons.trending_up),
+                                const SizedBox(width: 6),
+                                _buildSortChip('selling', 'Sell', Icons.trending_down),
+                                const SizedBox(width: 6),
+                                _buildSortChip('updated', 'Updated', Icons.schedule),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() => _sortAscending = !_sortAscending);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
+                              size: 16,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () {
-                  setState(() => _sortAscending = !_sortAscending);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    _sortAscending ? Icons.arrow_upward : Icons.arrow_downward,
-                    size: 16,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildCompactSortChip(String value, String label, IconData icon) {
+  Widget _buildSortChip(String value, String label, IconData icon) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isSelected = _sortBy == value;
@@ -357,14 +392,14 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _sortBy = value);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? colorScheme.primary.withOpacity(0.1)
               : colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
           border: isSelected
-              ? Border.all(color: colorScheme.primary, width: 1)
+              ? Border.all(color: colorScheme.primary, width: 1.5)
               : null,
         ),
         child: Row(
@@ -372,12 +407,12 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(
               icon,
-              size: 14,
+              size: 16,
               color: isSelected
                   ? colorScheme.primary
                   : colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -385,7 +420,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? colorScheme.primary
                     : colorScheme.onSurface,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                fontSize: 12,
               ),
             ),
           ],
@@ -394,7 +428,74 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Build error state widget
+  Widget _buildFilterStatusBar() {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final hasActiveFilters = _searchQuery.isNotEmpty || _sortBy != 'name' || !_sortAscending;
+
+    if (!hasActiveFilters) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_list,
+            size: 16,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _buildFilterSummary(),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          if (_searchQuery.isNotEmpty || _sortBy != 'name' || !_sortAscending)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                setState(() {
+                  _searchQuery = '';
+                  _sortBy = 'name';
+                  _sortAscending = true;
+                });
+              },
+              child: Icon(
+                Icons.clear,
+                size: 16,
+                color: colorScheme.primary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _buildFilterSummary() {
+    List<String> filters = [];
+    if (_searchQuery.isNotEmpty) {
+      filters.add('Search: "$_searchQuery"');
+    }
+    if (_sortBy != 'name') {
+      String sortLabel = _sortBy == 'buying' ? 'Buy' :
+      _sortBy == 'selling' ? 'Sell' :
+      _sortBy == 'updated' ? 'Updated' : 'Name';
+      filters.add('Sort: $sortLabel ${_sortAscending ? '↑' : '↓'}');
+    } else if (!_sortAscending) {
+      filters.add('Sort: Name ↓');
+    }
+    return filters.join(' • ');
+  }
+
   Widget _buildErrorState() {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -463,9 +564,19 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: theme.colorScheme.surface,
         automaticallyImplyLeading: false,
       ),
+      floatingActionButton: hasValidData && filteredRates.isNotEmpty
+          ? FloatingActionButton(
+        onPressed: _toggleFilter,
+        child: AnimatedRotation(
+          turns: _isFilterVisible ? 0.5 : 0,
+          duration: const Duration(milliseconds: 300),
+          child: Icon(_isFilterVisible ? Icons.close : Icons.tune),
+        ),
+      )
+          : null,
       body: Column(
         children: [
-          // Currency Selector - Only show when we have valid data
+          // Currency Selector
           if (hasValidData) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
@@ -505,9 +616,13 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
           ],
 
-          // Filter and Sort Bar - Only show when we have valid data
+          // Filter Status Bar
           if (hasValidData && filteredRates.isNotEmpty)
-            _buildFilterBar(),
+            _buildFilterStatusBar(),
+
+          // Animated Filter Bar
+          if (hasValidData && filteredRates.isNotEmpty)
+            _buildCompactFilterBar(),
 
           Expanded(
             child: RefreshIndicator(
@@ -518,7 +633,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: !hasLoadedOnce
                   ? const Center(child: CircularProgressIndicator())
                   : errorMessage != null
-                  ? _buildErrorState() // Show error state
+                  ? _buildErrorState()
                   : filteredRates.isEmpty
                   ? Center(
                 child: Column(
