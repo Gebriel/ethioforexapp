@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/adhelper_admob.dart'; // Assuming this provides the ad creation
 import '../models/bank.dart';
 import '../repositories/currency_repository.dart';
 import '../widgets/rate_list_item.dart';
@@ -26,9 +27,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _sortBy = 'name';
   bool _sortAscending = true;
   bool _isSearchActive = false;
-  bool _isFilterVisible = false; // New variable to control filter visibility
+  bool _isFilterVisible = false;
   late AnimationController _filterAnimationController;
   late Animation<double> _filterAnimation;
+
+  // AdMob Native Ad Variable
+  // Declare a nullable Widget to hold our ad.
+  Widget? _nativeAdWidget;
 
   @override
   void initState() {
@@ -49,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadPreferences();
+      _initializeNativeAd(); // Initialize the ad here
     });
   }
 
@@ -57,7 +63,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _searchController.dispose();
     _searchFocusNode.dispose();
     _filterAnimationController.dispose();
+    // It's good practice to dispose of ad resources if the helper supports it.
+    // Assuming AdMobNativeTemplateHelper manages its own ad lifecycle,
+    // we don't need to explicitly dispose _nativeAdWidget here, as it's just a reference.
     super.dispose();
+  }
+
+  void _initializeNativeAd() {
+    // Only create the ad widget once.
+    if (_nativeAdWidget == null) {
+      _nativeAdWidget = AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
+      // No need to call setState here as this is called in addPostFrameCallback
+      // before the first build, or when the widget is first inserted.
+    }
   }
 
   void _toggleFilter() {
@@ -627,6 +645,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               onRefresh: () async {
                 await _repository.forceRefresh();
                 await fetchInitialData(force: true);
+                // After a refresh, you might want to re-check if the ad needs to be loaded.
+                // However, if the ad is designed to persist, you might not need to re-initialize it here.
+                // For simplicity, we'll keep the ad initialized once in initState.
               },
               child: !hasLoadedOnce
                   ? const Center(child: CircularProgressIndicator())
@@ -666,21 +687,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               )
                   : ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                children: filteredRates.map((item) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: RateListItem(
-                      bankName: item['bankName'],
-                      bankLogo: item['bankLogo'],
-                      bankCode: item['bankCode'],
-                      cashBuying: item['cashBuying'],
-                      cashSelling: item['cashSelling'],
-                      transactionBuying: item['transactionBuying'],
-                      transactionSelling: item['transactionSelling'],
-                      updatedAt: item['updatedAt'],
+                children: [
+                  // Ad Widget - positioned at the top of the rate list
+                  // Use the stored _nativeAdWidget here
+                  if (filteredRates.isNotEmpty && _nativeAdWidget != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _nativeAdWidget!, // Use the cached ad widget
                     ),
-                  );
-                }).toList(),
+                  ],
+                  // Rate List Items
+                  ...filteredRates.map((item) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: RateListItem(
+                        bankName: item['bankName'],
+                        bankLogo: item['bankLogo'],
+                        bankCode: item['bankCode'],
+                        cashBuying: item['cashBuying'],
+                        cashSelling: item['cashSelling'],
+                        transactionBuying: item['transactionBuying'],
+                        transactionSelling: item['transactionSelling'],
+                        updatedAt: item['updatedAt'],
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
           ),

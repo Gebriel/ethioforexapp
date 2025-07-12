@@ -3,6 +3,7 @@ import '../models/bank_currency_rate.dart';
 import '../models/bank_rates_response.dart';
 import '../repositories/bank_repository.dart';
 import '../widgets/bank_currency_rate_item.dart';
+import '../helpers/adhelper_admob_convert_page.dart'; // Import the ad helper
 
 class ConvertScreen extends StatefulWidget {
   const ConvertScreen({super.key});
@@ -27,10 +28,29 @@ class _ConvertScreenState extends State<ConvertScreen> {
   bool hasLoadedOnce = false;
   String? errorMessage;
 
+  // AdMob Native Ad Variable
+  // Declare a nullable Widget to hold our ad.
+  Widget? _nativeAdWidget;
+
+
   @override
   void initState() {
     super.initState();
     loadInitial();
+    _initializeNativeAd(); // Initialize the ad here
+  }
+
+  @override
+  void dispose() {
+    amountController.dispose();
+    super.dispose();
+  }
+
+  void _initializeNativeAd() {
+    // Only create the ad widget once.
+    if (_nativeAdWidget == null) {
+      _nativeAdWidget = AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
+    }
   }
 
   Future<void> loadInitial({bool force = false}) async {
@@ -48,7 +68,9 @@ class _ConvertScreenState extends State<ConvertScreen> {
     try {
       await _repository.initialize();
       if (_repository.banks.isNotEmpty) {
-        await loadRates(_repository.banks.first.bankCode);
+        // Ensure selectedBankCode is set before calling loadRates to avoid null issues
+        selectedBankCode = _repository.banks.first.bankCode;
+        await loadRates(selectedBankCode!);
       }
       setState(() {
         hasLoadedOnce = true;
@@ -65,8 +87,14 @@ class _ConvertScreenState extends State<ConvertScreen> {
   }
 
   Future<void> loadRates(String bankCode) async {
+    // Only reload if the bank code is different or no rates are cached for this bank
     if (_repository.getCachedRates(bankCode) != null && bankCode == selectedBankCode) {
-      setState(() => errorMessage = null);
+      setState(() {
+        errorMessage = null;
+        bankRates = _repository.getCachedRates(bankCode); // Ensure bankRates is updated from cache
+        _updateCurrencySelection(); // Update currency selection when just reloading from cache
+      });
+      calculateConversion(); // Recalculate if rates are just re-set from cache
       return;
     }
 
@@ -82,14 +110,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
         bankRates = result;
         isLoading = false;
         errorMessage = null;
-
-        final newCurrencyList = useTransaction ? result.transactionRates : result.cashRates;
-        if (selectedCurrencyCode == null || !newCurrencyList.any((r) => r.currencyCode == selectedCurrencyCode)) {
-          selectedCurrencyCode = newCurrencyList.isNotEmpty
-              ? newCurrencyList.first.currencyCode
-              : null;
-        }
-        useTransaction = false;
+        _updateCurrencySelection(); // Update currency selection after new rates fetch
       });
       calculateConversion();
     } catch (e) {
@@ -99,6 +120,17 @@ class _ConvertScreenState extends State<ConvertScreen> {
       });
     }
   }
+
+  // Helper to manage selectedCurrencyCode after rates change
+  void _updateCurrencySelection() {
+    final newCurrencyList = useTransaction ? bankRates!.transactionRates : bankRates!.cashRates;
+    if (selectedCurrencyCode == null || !newCurrencyList.any((r) => r.currencyCode == selectedCurrencyCode)) {
+      selectedCurrencyCode = newCurrencyList.isNotEmpty
+          ? newCurrencyList.first.currencyCode
+          : null;
+    }
+  }
+
 
   String _getErrorMessage(dynamic error) {
     if (error.toString().contains('SocketException') ||
@@ -343,6 +375,13 @@ class _ConvertScreenState extends State<ConvertScreen> {
 
           if (convertedAmount != null && amountController.text.isNotEmpty)
             const SizedBox(height: 12),
+
+          // Ad Widget - positioned above BankCurrencyRateItem
+          if (_nativeAdWidget != null && hasValidData) // Only show ad if we have valid data generally
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12), // Spacing below ad
+              child: _nativeAdWidget!, // Use the cached ad widget
+            ),
 
           // Rates Card - More compact
           _buildCompactRatesCard(theme, selectedCash, selectedTxn),
