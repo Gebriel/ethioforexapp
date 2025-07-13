@@ -292,16 +292,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             )
                                 : null,
                           ),
-                          if (notificationsEnabled) ...[
-                            Divider(height: 1, color: theme.dividerColor),
-                            ListTile(
-                              title: const Text("Test Notification"),
-                              subtitle: const Text("Send a test notification now"),
-                              leading: const Icon(Icons.notifications_active),
-                              onTap: _testNotification,
-                              trailing: const Icon(Icons.send),
-                            ),
-                          ],
+                          // if (notificationsEnabled) ...[
+                          //   Divider(height: 1, color: theme.dividerColor),
+                          //   ListTile(
+                          //     title: const Text("Test Notification"),
+                          //     subtitle: const Text("Send a test notification now"),
+                          //     leading: const Icon(Icons.notifications_active),
+                          //     onTap: _testNotification,
+                          //     trailing: const Icon(Icons.send),
+                          //   ),
+                          // ],
                         ],
                       ),
                     ),
