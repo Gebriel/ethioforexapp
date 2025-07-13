@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/bank.dart';
 import '../repositories/currency_repository.dart';
 import '../widgets/rate_list_item.dart';
-import '../helpers/adhelper_admob.dart'; // Add this import for the ad helper
+import '../helpers/adhelper_admob_summary_page.dart'; // Add this import for the ad helper
 
 class UsdSummaryScreen extends StatefulWidget {
   final VoidCallback? onBackPressed;
@@ -40,9 +40,7 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
 
   void _initializeNativeAd() {
     // Only create the ad widget once
-    if (_nativeAdWidget == null) {
-      _nativeAdWidget = AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
-    }
+    _nativeAdWidget ??= AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
   }
 
   Future<void> fetchUsdRates({bool force = false}) async {
@@ -170,7 +168,7 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
             Text(
               errorMessage ?? 'Something went wrong',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -219,10 +217,10 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withOpacity(0.3),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: colorScheme.primary.withOpacity(0.2),
+          color: colorScheme.primary.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -265,7 +263,7 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: colorScheme.primary.withOpacity(0.1),
+                  color: colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -336,13 +334,13 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
               Icon(
                 Icons.account_balance,
                 size: 64,
-                color: theme.colorScheme.onSurface.withOpacity(0.3),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
               ),
               const SizedBox(height: 16),
               Text(
                 "No USD exchange rates found.",
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],

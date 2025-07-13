@@ -35,7 +35,7 @@ class _MainScreenState extends State<MainScreen> {
         currentIndex: _selectedIndex,
         onTap: _onTap,
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+        unselectedItemColor: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),

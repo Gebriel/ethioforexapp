@@ -3,7 +3,7 @@ import '../models/bank_currency_rate.dart';
 import '../models/bank_rates_response.dart';
 import '../repositories/bank_repository.dart';
 import '../widgets/bank_currency_rate_item.dart';
-import '../helpers/adhelper_admob_convert_page.dart'; // Import the ad helper
+import '../helpers/adhelper_admob_convert_page.dart';
 
 class ConvertScreen extends StatefulWidget {
   const ConvertScreen({super.key});
@@ -215,7 +215,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
             Text(
               errorMessage ?? 'Something went wrong',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -266,7 +266,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
                   color: theme.cardColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -326,14 +326,14 @@ class _ConvertScreenState extends State<ConvertScreen> {
               Icon(
                 Icons.account_balance,
                 size: 64,
-                color: theme.colorScheme.onSurface.withOpacity(0.3),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
               ),
               const SizedBox(height: 16),
               Text(
                 "No exchange rates available for the selected bank or currency. Please try a different selection or check back later.",
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 24),
@@ -401,7 +401,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
         color: theme.cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -578,7 +578,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
         color: theme.cardColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),

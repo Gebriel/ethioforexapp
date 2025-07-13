@@ -265,7 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: theme.cardColor,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
@@ -292,16 +292,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             )
                                 : null,
                           ),
-                          // if (notificationsEnabled) ...[
-                          //   Divider(height: 1, color: theme.dividerColor),
-                          //   ListTile(
-                          //     title: const Text("Test Notification"),
-                          //     subtitle: const Text("Send a test notification now"),
-                          //     leading: const Icon(Icons.notifications_active),
-                          //     onTap: _testNotification,
-                          //     trailing: const Icon(Icons.send),
-                          //   ),
-                          // ],
+                          if (notificationsEnabled) ...[
+                            Divider(height: 1, color: theme.dividerColor),
+                            ListTile(
+                              title: const Text("Test Notification"),
+                              subtitle: const Text("Send a test notification now"),
+                              leading: const Icon(Icons.notifications_active),
+                              onTap: _testNotification,
+                              trailing: const Icon(Icons.send),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -317,10 +317,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         margin: const EdgeInsets.only(bottom: 20),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+                          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: theme.colorScheme.primary.withOpacity(0.2),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(
@@ -369,7 +369,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: theme.cardColor,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, 2),
                             ),

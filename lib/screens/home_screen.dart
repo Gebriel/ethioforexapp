@@ -26,7 +26,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   String _searchQuery = '';
   String _sortBy = 'name';
   bool _sortAscending = true;
-  bool _isSearchActive = false;
   bool _isFilterVisible = false;
   late AnimationController _filterAnimationController;
   late Animation<double> _filterAnimation;
@@ -47,11 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.easeInOut,
     );
 
-    _searchFocusNode.addListener(() {
-      setState(() {
-        _isSearchActive = _searchFocusNode.hasFocus;
-      });
-    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadPreferences();
       _initializeNativeAd(); // Initialize the ad here
@@ -71,11 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _initializeNativeAd() {
     // Only create the ad widget once.
-    if (_nativeAdWidget == null) {
-      _nativeAdWidget = AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
-      // No need to call setState here as this is called in addPostFrameCallback
-      // before the first build, or when the widget is first inserted.
-    }
+    _nativeAdWidget ??= AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
   }
 
   void _toggleFilter() {
@@ -198,7 +189,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   List<dynamic> _getFilteredAndSortedRates() {
-    final currencies = _repository.currencies;
     final currencyRates = selectedCurrency != null ? _repository.getCachedRates(selectedCurrency!) : null;
     final rates = currencyRates?.cashRates ?? [];
 
@@ -279,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.shadow.withOpacity(0.1),
+                    color: colorScheme.shadow.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -411,7 +401,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? colorScheme.primary.withOpacity(0.1)
+              ? colorScheme.primary.withValues(alpha: 0.1)
               : colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
           border: isSelected
@@ -455,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withOpacity(0.3),
+        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -539,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Text(
               errorMessage ?? 'Something went wrong',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -602,7 +592,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   color: theme.cardColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -661,7 +651,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     Icon(
                       _searchQuery.isNotEmpty ? Icons.search_off : Icons.account_balance,
                       size: 64,
-                      color: theme.colorScheme.onSurface.withOpacity(0.3),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -669,7 +659,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ? "No banks found matching '$_searchQuery'"
                           : "No exchange rates found.",
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                     if (_searchQuery.isNotEmpty) ...[

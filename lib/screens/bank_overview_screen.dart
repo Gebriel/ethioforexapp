@@ -27,7 +27,6 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
-  bool _isSearchActive = false;
   bool _isFilterVisible = false;
   late AnimationController _filterAnimationController;
   late Animation<double> _filterAnimation;
@@ -47,11 +46,6 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
       curve: Curves.easeInOut,
     );
 
-    _searchFocusNode.addListener(() {
-      setState(() {
-        _isSearchActive = _searchFocusNode.hasFocus;
-      });
-    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadPreferences();
@@ -235,8 +229,8 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
       return {
         'rate': rate,
         'txn': txn,
-        'currencyName': rate.currencyName ?? '',
-        'currencyCode': rate.currencyCode ?? '',
+        'currencyName': rate.currencyName,
+        'currencyCode': rate.currencyCode,
       };
     }).toList();
 
@@ -270,7 +264,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.shadow.withOpacity(0.1),
+                    color: colorScheme.shadow.withAlpha((0.1 * 255).round()),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -344,7 +338,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withOpacity(0.3),
+        color: colorScheme.primaryContainer.withAlpha((0.3 * 255).round()),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -407,7 +401,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
             Text(
               errorMessage ?? 'Something went wrong',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.7),
+                color: colorScheme.onSurface.withAlpha((0.7 * 255).round()),
               ),
               textAlign: TextAlign.center,
             ),
@@ -482,7 +476,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
                   color: theme.cardColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withAlpha((0.05 * 255).round()),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -539,7 +533,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
                     Icon(
                       _searchQuery.isNotEmpty ? Icons.search_off : Icons.account_balance,
                       size: 64,
-                      color: theme.colorScheme.onSurface.withOpacity(0.3),
+                      color: theme.colorScheme.onSurface.withAlpha((0.3 * 255).round()),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -547,7 +541,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
                           ? "No currencies found matching '$_searchQuery'"
                           : "No rates available.",
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        color: theme.colorScheme.onSurface.withAlpha((0.6 * 255).round()),
                       ),
                     ),
                     if (_searchQuery.isNotEmpty) ...[
@@ -578,7 +572,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
+                                  color: Colors.black.withAlpha((0.05 * 255).round()),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -588,7 +582,7 @@ class _BankOverviewScreenState extends State<BankOverviewScreen>
                             child: Image.network(
                               logoUrl,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) =>
+                              errorBuilder: (_, _, _) =>
                               const SizedBox(),
                             ),
                           ),

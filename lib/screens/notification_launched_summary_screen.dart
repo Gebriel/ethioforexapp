@@ -7,13 +7,15 @@ class NotificationLaunchedSummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // When back is pressed, navigate to MainScreen instead of exiting
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
-        return false; // Prevent default back behavior
+    return PopScope(
+      canPop: false, // Prevent default back behavior
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop) {
+          // When back is pressed, navigate to MainScreen instead of exiting
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MainScreen()),
+          );
+        }
       },
       child: UsdSummaryScreen(
         // Add a custom back button handler

@@ -23,7 +23,7 @@ class UsdHistoryChart extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: colorScheme.shadow.withOpacity(0.05),
+              color: colorScheme.shadow.withValues(alpha: 0.05),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -90,7 +90,7 @@ class UsdHistoryChart extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.shadow.withOpacity(0.05),
+            color: colorScheme.shadow.withValues(alpha:0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
