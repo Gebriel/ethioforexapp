@@ -6,7 +6,7 @@ class AdMobNativeTemplateHelper {
   static String get nativeAdUnitId {
     if (Platform.isAndroid) {
       // Use a test ad unit ID for development to avoid policy violations
-      return 'ca-app-pub-4980093588441492/2628220618'; // Test Native Ad Unit ID
+      return 'ca-app-pub-4980093588441492/7977584365'; // Test Native Ad Unit ID
       // Replace with your actual ad unit ID for production
       // return 'ca-app-pub-4980093588441492/5093203059';
     }

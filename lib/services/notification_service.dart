@@ -40,6 +40,11 @@ class NotificationService {
     );
   }
 
+  /// Get notification launch details - ADD THIS METHOD
+  Future<NotificationAppLaunchDetails?> getNotificationAppLaunchDetails() async {
+    return await _flutterLocalNotificationsPlugin.getNotificationAppLaunchDetails();
+  }
+
   /// Call from main.dart to link tap to navigation
   void setNotificationTapCallback(Function(String) callback) {
     _onNotificationTapCallback = callback;

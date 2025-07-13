@@ -119,7 +119,7 @@ class _AdMobNativeTemplateWidgetState extends State<AdMobNativeTemplateWidget> {
           size: 14.0,
         ),
         tertiaryTextStyle: NativeTemplateTextStyle(
-          textColor: colors.outline,
+          textColor: colors.onSurface,
           backgroundColor: colors.surface,
           size: 12.0,
         ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:ethioforexapp/theme_notifier.dart';
 import 'package:ethioforexapp/screens/main_screen.dart';
 import 'package:ethioforexapp/screens/summary_screen.dart';
+import 'package:ethioforexapp/screens/notification_launched_summary_screen.dart';
 import 'package:ethioforexapp/services/notification_service.dart';
 
 void main() async {
@@ -12,7 +13,18 @@ void main() async {
   await notificationService.initialize();
   await notificationService.checkAndRequestPermissions();
 
-  // Set the callback that will be triggered when a notification is tapped
+  // Check if app was launched from notification
+  final launchDetails = await notificationService.getNotificationAppLaunchDetails();
+  String? initialRoute;
+
+  if (launchDetails?.didNotificationLaunchApp == true) {
+    final payload = launchDetails?.notificationResponse?.payload;
+    if (payload == 'usd_summary') {
+      initialRoute = '/summary';
+    }
+  }
+
+  // Set the callback that will be triggered when a notification is tapped (for when app is running)
   notificationService.setNotificationTapCallback((payload) {
     if (payload == 'usd_summary') {
       notificationService.navigatorKey.currentState?.push(
@@ -27,14 +39,23 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeNotifier()),
         Provider<NotificationService>.value(value: notificationService),
       ],
-      child: MyApp(notificationService: notificationService),
+      child: MyApp(
+        notificationService: notificationService,
+        initialRoute: initialRoute,
+      ),
     ),
   );
 }
 
 class MyApp extends StatelessWidget {
   final NotificationService notificationService;
-  const MyApp({super.key, required this.notificationService});
+  final String? initialRoute;
+
+  const MyApp({
+    super.key,
+    required this.notificationService,
+    this.initialRoute,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -43,11 +64,24 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'EthioForex',
       debugShowCheckedModeBanner: false,
-      navigatorKey: notificationService.navigatorKey, // ✅ required for navigation on tap
+      navigatorKey: notificationService.navigatorKey,
       theme: themeNotifier.lightTheme,
       darkTheme: themeNotifier.darkTheme,
       themeMode: themeNotifier.themeMode,
-      home: const MainScreen(),
+      home: _getInitialScreen(),
+      routes: {
+        '/summary': (context) => const UsdSummaryScreen(),
+        '/home': (context) => const MainScreen(),
+      },
     );
+  }
+
+  Widget _getInitialScreen() {
+    if (initialRoute == '/summary') {
+      // When launched from notification, wrap in a custom screen
+      // that handles back navigation properly
+      return const NotificationLaunchedSummaryScreen();
+    }
+    return const MainScreen();
   }
 }

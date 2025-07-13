@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import '../models/bank.dart';
 import '../repositories/currency_repository.dart';
 import '../widgets/rate_list_item.dart';
+import '../helpers/adhelper_admob.dart'; // Add this import for the ad helper
 
 class UsdSummaryScreen extends StatefulWidget {
-  const UsdSummaryScreen({super.key});
+  final VoidCallback? onBackPressed;
+
+  const UsdSummaryScreen({super.key, this.onBackPressed});
 
   @override
   State<UsdSummaryScreen> createState() => _UsdSummaryScreenState();
@@ -17,12 +20,29 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
   bool hasLoadedOnce = false;
   String? errorMessage;
 
+  // AdMob Native Ad Variable
+  Widget? _nativeAdWidget;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       fetchUsdRates();
+      _initializeNativeAd(); // Initialize the ad
     });
+  }
+
+  @override
+  void dispose() {
+    // Clean up ad resources if needed
+    super.dispose();
+  }
+
+  void _initializeNativeAd() {
+    // Only create the ad widget once
+    if (_nativeAdWidget == null) {
+      _nativeAdWidget = AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
+    }
   }
 
   Future<void> fetchUsdRates({bool force = false}) async {
@@ -196,7 +216,7 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.primaryContainer.withOpacity(0.3),
@@ -263,6 +283,14 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
     );
   }
 
+  void _handleBackPress() {
+    if (widget.onBackPressed != null) {
+      widget.onBackPressed!();
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -281,7 +309,7 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
         backgroundColor: theme.colorScheme.surface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _handleBackPress,
         ),
         actions: [
           if (hasValidData)
@@ -320,32 +348,34 @@ class _UsdSummaryScreenState extends State<UsdSummaryScreen> {
             ],
           ),
         )
-            : Column(
+            : ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           children: [
+            // Summary header as first item in the scrollable list
             _buildSummaryHeader(),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 8,
-                ),
-                children: sortedRates.map((item) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: RateListItem(
-                      bankName: item['bankName'],
-                      bankLogo: item['bankLogo'],
-                      bankCode: item['bankCode'],
-                      cashBuying: item['cashBuying'],
-                      cashSelling: item['cashSelling'],
-                      transactionBuying: item['transactionBuying'],
-                      transactionSelling: item['transactionSelling'],
-                      updatedAt: item['updatedAt'],
-                    ),
-                  );
-                }).toList(),
+            // Add the ad widget here, as part of the scrollable content
+            if (_nativeAdWidget != null) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _nativeAdWidget!,
               ),
-            ),
+            ],
+            // Rate list items
+            ...sortedRates.map((item) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: RateListItem(
+                  bankName: item['bankName'],
+                  bankLogo: item['bankLogo'],
+                  bankCode: item['bankCode'],
+                  cashBuying: item['cashBuying'],
+                  cashSelling: item['cashSelling'],
+                  transactionBuying: item['transactionBuying'],
+                  transactionSelling: item['transactionSelling'],
+                  updatedAt: item['updatedAt'],
+                ),
+              );
+            }),
           ],
         ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme_notifier.dart';
 import '../services/notification_service.dart';
 
@@ -40,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Daily notifications enabled at 9:00 AM'),
+              content: Text('Daily notifications enabled at 5:00 PM Ethiopian Time'),
               backgroundColor: Colors.green,
             ),
           );
@@ -120,11 +121,112 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       .titleLarge
                       ?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              Text(content, style: Theme.of(context).textTheme.bodyMedium),
+              _buildRichText(content),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRichText(String content) {
+    final theme = Theme.of(context);
+    final List<Widget> widgets = [];
+    final lines = content.split('\n');
+
+    for (String line in lines) {
+      if (line.trim().isEmpty) {
+        widgets.add(const SizedBox(height: 8));
+        continue;
+      }
+
+      // Check if line contains URL
+      if (line.contains('https://ethio.forex/privacy')) {
+        final parts = line.split('https://ethio.forex/privacy');
+        widgets.add(
+          RichText(
+            text: TextSpan(
+              style: theme.textTheme.bodyMedium,
+              children: [
+                TextSpan(text: parts[0]),
+                WidgetSpan(
+                  child: GestureDetector(
+                    onTap: () async {
+                      final uri = Uri.parse('https://ethio.forex/privacy');
+                      if (await canLaunchUrl(uri)) {
+                        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        if (!launched) {
+                          debugPrint('Could not launch externally, trying in-app webview...');
+                          await launchUrl(uri, mode: LaunchMode.inAppWebView);
+                        }
+                      } else {
+                        debugPrint('Could not launch $uri');
+                      }
+                    },
+                    child: Text(
+                      'https://ethio.forex/privacy',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+                if (parts.length > 1) TextSpan(text: parts[1]),
+              ],
+            ),
+          ),
+        );
+      } else if (line.contains('https://ethio.forex')) {
+        final parts = line.split('https://ethio.forex');
+        widgets.add(
+          RichText(
+            text: TextSpan(
+              style: theme.textTheme.bodyMedium,
+              children: [
+                TextSpan(text: parts[0]),
+                WidgetSpan(
+                  child: GestureDetector(
+                    onTap: () async {
+                      final uri = Uri.parse('https://ethio.forex');
+                      if (await canLaunchUrl(uri)) {
+                        final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        if (!launched) {
+                          debugPrint('Could not launch externally, trying in-app webview...');
+                          await launchUrl(uri, mode: LaunchMode.inAppWebView);
+                        }
+                      } else {
+                        debugPrint('Could not launch $uri');
+                      }
+                    },
+                    child: Text(
+                      'https://ethio.forex',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+                if (parts.length > 1) TextSpan(text: parts[1]),
+              ],
+            ),
+          ),
+        );
+      } else {
+        widgets.add(
+          Text(
+            line,
+            style: theme.textTheme.bodyMedium,
+          ),
+        );
+      }
+      widgets.add(const SizedBox(height: 4));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: widgets,
     );
   }
 
@@ -190,16 +292,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             )
                                 : null,
                           ),
-                          if (notificationsEnabled) ...[
-                            Divider(height: 1, color: theme.dividerColor),
-                            ListTile(
-                              title: const Text("Test Notification"),
-                              subtitle: const Text("Send a test notification now"),
-                              leading: const Icon(Icons.notifications_active),
-                              onTap: _testNotification,
-                              trailing: const Icon(Icons.send),
-                            ),
-                          ],
+                          // if (notificationsEnabled) ...[
+                          //   Divider(height: 1, color: theme.dividerColor),
+                          //   ListTile(
+                          //     title: const Text("Test Notification"),
+                          //     subtitle: const Text("Send a test notification now"),
+                          //     leading: const Icon(Icons.notifications_active),
+                          //     onTap: _testNotification,
+                          //     trailing: const Icon(Icons.send),
+                          //   ),
+                          // ],
                         ],
                       ),
                     ),
@@ -241,7 +343,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    "Every day at 9:00 AM",
+                                    "Every day at 5:00 PM Ethiopian Time",
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       color: theme.colorScheme.onSurfaceVariant,
                                     ),
@@ -304,20 +406,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final String _privacyText = '''
 Your privacy and data security are our top priorities.
 
-We collect only essential data such as usage patterns to improve app performance. We use Google AdMob to serve ads. No personal data is sold or shared.
+Last updated: July 13, 2025
 
-Notifications are stored locally on your device and are not sent to external servers.
+This Privacy Policy describes Our policies and procedures on the collection, use, and disclosure of Your information when You use the EthioForex Service.
 
-For any questions, contact us at privacy@ethio.forex.
+Our full Privacy Policy is available online at:
+https://ethio.forex/privacy
+
+We collect only essential data such as usage patterns to improve app performance and provide accurate exchange rate information. We use Google AdMob to serve ads. No personal data is sold or shared with third parties.
+
+Exchange rate notifications are processed locally on your device and are not sent to external servers. Your notification preferences are stored securely on your device.
+
+The information collected is used to operate and maintain the application's functionality, analyze app usage patterns, display advertisements, and provide you with the most current Ethiopian bank exchange rates.
+
+For any questions about this Privacy Policy, contact us at privacy@ethio.forex
 ''';
 
   final String _aboutText = '''
 EthioForex helps you compare Ethiopian bank exchange rates for foreign currencies in real-time.
 
-We aim to make it easy for you to make informed financial decisions. Built with love by a team of developers and financial experts.
+Our beautiful and functional forex app provides:
 
-Daily notifications help you stay updated with the latest USD exchange rates every morning at 9:00 AM.
+• Real-time exchange rate comparisons from major Ethiopian banks
+• Daily USD exchange rate notifications at 5:00 PM Ethiopian Time
+• Clean, intuitive interface for easy rate checking
+• Dark and light theme options
+• Accurate and up-to-date currency information
+
+We aim to make it easy for you to make informed financial decisions by providing the most current exchange rates from trusted Ethiopian financial institutions.
+
+Built with love by a team of developers and financial experts who understand the importance of accessible financial information.
+
+Stay updated with the latest exchange rates and never miss important currency fluctuations with our daily notification system.
 
 Contact: contact@ethio.forex
+Website: https://ethio.forex
 ''';
 }
