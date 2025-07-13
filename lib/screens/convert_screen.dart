@@ -48,9 +48,7 @@ class _ConvertScreenState extends State<ConvertScreen> {
 
   void _initializeNativeAd() {
     // Only create the ad widget once.
-    if (_nativeAdWidget == null) {
-      _nativeAdWidget = AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
-    }
+    _nativeAdWidget ??= AdMobNativeTemplateHelper.createNativeTemplateAdWidget();
   }
 
   Future<void> loadInitial({bool force = false}) async {

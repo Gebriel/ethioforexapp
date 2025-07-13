@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
-import '../screens/summary_screen.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
