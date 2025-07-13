@@ -116,7 +116,7 @@ class NotificationService {
         _dailyNotificationId,
         'USD Exchange Rates Update',
         'Check the latest USD exchange rates from Ethiopian banks',
-        _nextInstanceOfTime(9, 0),
+        _nextInstanceOfTime(14, 00),
         const NotificationDetails(
           android: AndroidNotificationDetails(
             'daily_forex_channel',

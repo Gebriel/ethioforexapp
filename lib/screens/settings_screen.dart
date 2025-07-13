@@ -281,7 +281,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Divider(height: 1, color: theme.dividerColor),
                           SwitchListTile(
                             title: const Text("Daily Notifications"),
-                            subtitle: const Text("Get USD exchange rates at 9:00 AM daily"),
+                            subtitle: const Text("Get USD exchange rates at 5:00 PM daily"),
                             value: notificationsEnabled,
                             onChanged: isLoading ? null : toggleNotifications,
                             secondary: isLoading
